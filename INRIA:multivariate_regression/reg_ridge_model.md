@@ -394,7 +394,7 @@ $$
 (regression_2446573_44)
 
 
-## Next Step
+# Next Step
 
 Using Ridge regression, which is capable of performing linear regressions, measure its metrics and use it as a base to develop a more complex model capable of performing non-linear regressions. 
 
@@ -721,3 +721,304 @@ In this section we are going to take only an MLP with one layer with dimension 5
 - With 100 principal components, PCA captured only 54% of the explained variance. However, increasing the number of components to 190, it captures 97% of the explained variance.
 - Using 190 components in PCA, the R2 score was improved and MAPE on the testing set was reduced, indicating a better performance of the model.
 - Normalization contributed to slightly better results.
+
+
+
+## Returning to Multimodal embedding idea...
+
+Recall:
+> The main idea was:
+> $$
+> \arg\min \mathcal L(\gamma, \beta, \eta) = \sum_i d(f_\gamma(X_i), g_\beta(Y_i)) + \alpha\|h_\eta(g_\beta(Y_i))-Y_i\|^2_2 
+> $$
+> for each subject $i$, where $d$ can be the $L_2$ norm. This means that $h_\eta = g^{-1}_\beta$
+
+Now, if we think the new loss as:
+$$
+\arg\min \mathcal L(\gamma, \beta, \eta, \delta) = \|h_\eta(g_\beta(Y_i))-h_\delta(f_\gamma(X_i))\|^2_2 + \|h_\eta(g_\beta(Y_i))-Y_i\|^2_2 + \|h_\delta(f_\gamma(X_i))-Y_i\|^2_2
+$$
+
+We use three terms in our new loss function:
+1. The distance between decoder outputs of the latent space mappings of $Y_i$ and $X_i$.
+2. The distance between the decoder output of $Y_i$ and the actual label $Y_i$.
+3. The distance between the decoder output of $X_i$ and the actual label $Y_i$.
+
+
+### Code snap
+
+#### NN Architecture
+```
+class MultiModalEmbedding(nn.Module):
+    def __init__(self, f_input_dim, c_input_dim, f_layers_dim, c_layers_dim, latent_space_dim, alpha=1):
+        super(MultiModalEmbedding, self).__init__()
+        self.alpha = alpha
+
+        # Features Encoder
+        self.f_encoder = nn.Sequential(
+            nn.Linear(f_input_dim, f_layers_dim[0]),
+            nn.GELU(),
+        )
+        for i in range(len(f_layers_dim) - 1):
+            self.f_encoder.add_module(f'linear_{i}', nn.Linear(f_layers_dim[i], f_layers_dim[i+1]))
+            self.f_encoder.add_module(f'relu_{i}', nn.GELU())
+        self.f_encoder.add_module(f'latent_space', nn.Linear(f_layers_dim[-1], latent_space_dim))
+
+        # Cognition Encoder
+        self.c_encoder = nn.Sequential(
+            nn.Linear(c_input_dim, c_layers_dim[0]),
+            nn.GELU(),
+        )
+        for i in range(len(c_layers_dim) - 1):
+            self.c_encoder.add_module(f'linear_{i}', nn.Linear(c_layers_dim[i], c_layers_dim[i+1]))
+            self.c_encoder.add_module(f'relu_{i}', nn.GELU())
+        self.c_encoder.add_module(f'latent_space', nn.Linear(c_layers_dim[-1], latent_space_dim))
+
+        # Cognition Decoder
+        self.c_decoder = nn.Sequential(
+            nn.Linear(latent_space_dim, c_layers_dim[-1]),
+            nn.GELU(),
+        )
+        for i in range(len(c_layers_dim) - 1, 0, -1):
+            self.c_decoder.add_module(f'linear_{i}', nn.Linear(c_layers_dim[i], c_layers_dim[i-1]))
+            self.c_decoder.add_module(f'relu_{i}', nn.GELU())
+        self.c_decoder.add_module(f'input_space', nn.Linear(c_layers_dim[0], c_input_dim))
+
+
+    def forward (self, x, y):
+        f_gamma = self.f_encoder(x)
+        g_beta  = self.c_encoder(y)
+        h_eta   = self.c_decoder(g_beta)
+        h_eta_f_gamma = self.c_decoder(f_gamma)
+
+        return f_gamma, g_beta, h_eta, h_eta_f_gamma
+    
+
+class MultiModalEmbeddingNet(skorch.NeuralNet):    
+    def get_loss(self, y_pred, y_true, *args, **kwargs):
+        f_gamma, g_beta, h_eta, h_eta_f_gamma = y_pred
+        
+        reconst_loss = super().get_loss(h_eta, h_eta_f_gamma, *args, **kwargs)
+        self.history.record('reconst_loss', reconst_loss.item())
+        y_true_loss  = super().get_loss(h_eta, y_true, *args, **kwargs)
+        self.history.record('y_true_loss', y_true_loss.item())
+        y_from_x_loss = super().get_loss(h_eta_f_gamma, y_true, *args, **kwargs)
+        self.history.record('y_from_x_loss', y_from_x_loss.item())
+               
+        loss = reconst_loss + y_true_loss + y_from_x_loss
+
+        return loss
+```
+
+#### Skorch Implementation
+```
+f_input_dim = input_dim
+c_input_dim = output_dim
+f_layers_dim     = [1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim     = [256, 256, 256, 256]
+latent_space_dim = 6
+custom_model = MultiModalEmbeddingNet (
+    module = MultiModalEmbedding,
+    module__f_input_dim = f_input_dim,
+    module__c_input_dim = c_input_dim,
+    module__f_layers_dim = f_layers_dim,
+    module__c_layers_dim = c_layers_dim,
+    module__latent_space_dim = latent_space_dim,
+    module__alpha = alpha,
+    criterion=nn.MSELoss,
+    optimizer=torch.optim.AdamW,
+    optimizer__lr=0.001,
+    max_epochs=10000,
+    train_split=None,
+    callbacks = [   ('lr_scheduler', LRScheduler(policy=ReduceLROnPlateau,
+                                                mode='min', 
+                                                factor=0.1, 
+                                                patience=30
+                                                )),
+```
+
+
+
+### Experiments
+
+
+#### Constant parameters
+n_pca_components=190
+n_splits=10
+n_repeats = 5
+latent_space_dim = 6
+
+
+#### First test (1 repeat)
+
+
+f_layers_dim     = [180, 170, 160, 150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+c_layers_dim     = [256, 256]
+
+
+
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_bedfe319bfe93172912fdaab9be22470.png)
+![](https://notes.inria.fr/uploads/upload_13b383addf2a935e9aa9eea39e7eb95e.png)
+![](https://notes.inria.fr/uploads/upload_d150c5db3c3ded2e892011151aa8ba0f.png)
+![](https://notes.inria.fr/uploads/upload_790fa584cf89a11d0bafd088a6a16c60.png)
+![](https://notes.inria.fr/uploads/upload_d2c16592cd07ce3b91eaf65998aafc7d.png)
+
+##### Plots during testing (Metrics)
+
+![](https://notes.inria.fr/uploads/upload_7c0d3189eae498675de7e5c168ed7090.png)
+![](https://notes.inria.fr/uploads/upload_8067706b2533ed75274688034520d92a.png)
+
+
+
+
+##### First clues
+- The reconstruction loss remains very low, indicating that the points between $X$ and $Y$ in the latent space are well-aligned.
+
+- The autoencoder also trains very effectively.
+
+- However, the loss for $Y$ predicted from $X$ remains high and does not decrease significantly.  **Could this be due to the dimensions of the decoder being unable to capture these features? Or perhaps it is related to the encoder's handling of the features themselves?**
+
+- I think MAPE is not the best metric to measure because is very sensitivity to small true values. This is the mape formula: $\text{MAPE}(y, \hat{y}) = \frac{1}{n_{\text{samples}}} \sum_{i=0}^{n_{\text{samples}}-1} \frac{{}\left| y_i - \hat{y}_i \right|}{\max(\epsilon, \left| y_i \right|)}$.
+For example, if we have true value ($y_i$) = 0.1, and predicted value ($\hat{y}_i$)= 1.1, MAPE is going to be = 10 or 1000%. 
+
+
+#### Second test
+
+f_layers_dim=[1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim=[512, 512]
+
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_96b5e4f95ec1356352d2b7831538a54e.png)
+![](https://notes.inria.fr/uploads/upload_ef01e2d3af3cc4c708306e740b9d7406.png)
+![](https://notes.inria.fr/uploads/upload_8467bcfa6325bd322640eae76594d2c9.png)
+![](https://notes.inria.fr/uploads/upload_ba3029aed36d765130c0660de20e8fa6.png)
+![](https://notes.inria.fr/uploads/upload_0b6e02ffc9c03c0953b91c2c809fd1f2.png)
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_52e43388513ef255608dd02a4724f28c.png)
+![](https://notes.inria.fr/uploads/upload_40e06dc7dd4081ff1119385f731fb146.png)
+
+
+
+#### Third test
+f_layers_dim=[1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim=[1024, 512, 256]
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_14d0707e1cd3ae20c37f3d810c64a3fd.png)
+![](https://notes.inria.fr/uploads/upload_d1171e4b02ec86d4ae92d290d19ff94d.png)
+![](https://notes.inria.fr/uploads/upload_937a4284fae3bb8c7f82ba3955ee9237.png)
+![](https://notes.inria.fr/uploads/upload_4c009f58db8c4343e5149324197f5584.png)
+![](https://notes.inria.fr/uploads/upload_3504eaf5bc98b8f25a5572114bf541c9.png)
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_97ef30ab2076f4b6c67b2e904ede65c4.png)
+![](https://notes.inria.fr/uploads/upload_72c8f9dbb3f9ecc948e00efcbc195201.png)
+
+#### Fourth test
+f_layers_dim=[180, 170, 160, 150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20]
+c_layers_dim=[512, 512]
+
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_8386d6acee16ffae731d0e014e08c8e1.png)
+![](https://notes.inria.fr/uploads/upload_e50cc56030df34a6f7d5077a9ba0b59d.png)
+![](https://notes.inria.fr/uploads/upload_91773c220f31dc1a04f87024e0730e33.png)
+![](https://notes.inria.fr/uploads/upload_bd1cb889495d648bf37603fbb793980a.png)
+![](https://notes.inria.fr/uploads/upload_41efc563e38cd44a031529cd33e15332.png)
+
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_910f2cde1fa621bf49348e78efb0b8bd.png)
+![](https://notes.inria.fr/uploads/upload_d8c64892cf5a4f39f92b572bd41269ff.png)
+
+#### Fifth test
+DATOS NORMALIZADOS PREVIO A PCA
+f_layers_dim=[1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim=[512, 512]
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_8a367767f69b88f82dde88cf7cbf18fd.png)
+![](https://notes.inria.fr/uploads/upload_133ac8fd8d6854be944261e4aa8b6392.png)
+![](https://notes.inria.fr/uploads/upload_1ab0a6087b07998581569fe4e9285c77.png)
+![](https://notes.inria.fr/uploads/upload_7ba2d2b43050193533a5dca05e9bbd80.png)
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_64e31f3cb8b589f77ba2732d0fc6737a.png)
+![](https://notes.inria.fr/uploads/upload_2dab8e7d06b4a40e6d7d36dc46f33715.png)
+
+#### Sixth test
+NORMALIZADO ANTES Y DESP DE PCA
+f_layers_dim=[1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim=[512, 512]
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_0f10fc2260a0d5f2d4bc8ab493dec693.png)
+![](https://notes.inria.fr/uploads/upload_7d8920e12185a9321b13977ef9276701.png)
+![](https://notes.inria.fr/uploads/upload_c337bebd519793b5e4adf98f6d8e0879.png)
+![](https://notes.inria.fr/uploads/upload_2c7a366eb8c906bf9ce04b4aea447895.png)
+![](https://notes.inria.fr/uploads/upload_ec8668b241fdec7f069d8f6a4efadec8.png)
+
+
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_297f2d8a23909756c6c06f42f3f14a58.png)
+![](https://notes.inria.fr/uploads/upload_f8a1acdb39f2925a6c54bbb927b45dfe.png)
+
+
+#### Testing the autoencoder loss
+
+
+##### Model 1: Autoencoder with 3 layers of 11, 9, 7 neurons, using ReLU activation for each layer
+
+Test MAPE: 9.4474483
+Train MAPE: 0.58291
+
+##### Model 2: Autoencoder with 3 layers of 512 neurons each, using ReLU activation for each layer
+
+Test MAPE: 4.4474483
+Train MAPE: 0.005852234
+
+##### Model 3: Autoencoder with 2 layers of 2048 and 512 neurons, using ReLU activation for each layer
+
+Test MAPE: 1.5439097
+Train MAPE: 0.1717046
+
+##### Model 4: Autoencoder with 2 layers of 2048 neurons each, using ReLU activation for each layer
+
+Test MAPE: 5.940394
+Train MAPE: 0.9548608
+ 
+##### Conclusion for autoencoder part
+
+Mape in test set is very high. It seems to be an overfitting there. Nevertheless, I figured it out the need of having more neurones per layers since the previous experiments had only 10 and 8 neurons each layer. It improved a lot the results. 
+
+### Last tests
+#### First test
+f_layers_dim=[1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim=[256, 256, 256, 256]
+latent_space_dim = 6
+PCA = 190 components
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_818222002d5896eedeb71aaa8ab37e1e.png)
+![](https://notes.inria.fr/uploads/upload_dc3118c1a99c70a1aee6f01971786563.png)
+![](https://notes.inria.fr/uploads/upload_2907bb355631539e25856da2ca3dc023.png)
+![](https://notes.inria.fr/uploads/upload_3d3dab70b60c135c43d47d3ce1510b76.png)
+![](https://notes.inria.fr/uploads/upload_d59c742f200a777923777b8e82955409.png)
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_9e8844398a7041cdd2d802799824e966.png)
+![](https://notes.inria.fr/uploads/upload_def509b85d1b3586bbd0f798fa909251.png)
+#### Second test
+f_layers_dim=[1024, 1024, 1024, 512, 512, 512, 256, 256, 256, 128, 128, 128, 64, 64, 32, 32]
+c_layers_dim=[1024, 512, 256, 128]
+latent_space_dim = 6
+PCA = 190 components
+
+##### Plots during training (Losses)
+![](https://notes.inria.fr/uploads/upload_b5c463ac9e99d39d3a1776f074ed1970.png)
+![](https://notes.inria.fr/uploads/upload_8f2404a4a82e47887b0a96e680de4291.png)
+![](https://notes.inria.fr/uploads/upload_96e97aac9d79270e087c105d33057b25.png)
+![](https://notes.inria.fr/uploads/upload_f6672a3a91d4192d7cbca3b062898657.png)
+
+##### Plots during testing (Metrics)
+![](https://notes.inria.fr/uploads/upload_1a9559610aa5d72a97948542e61211c3.png)
+![](https://notes.inria.fr/uploads/upload_410d92289340c3e72b8e772e13c8287b.png)
+
+
+
+### Conclusion
+
+If we compare the results obtained in the previous section (0.0028 +/- 0.0223) with those obtained with this new loss function in this section, we can observe the remarkable improvement of the model performance However, I believe that there is room for improvement since the results vary considerably depending on the depth and number of neurons per layer used in the decoder.
+
+
