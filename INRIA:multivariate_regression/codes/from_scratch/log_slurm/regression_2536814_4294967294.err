@@ -1,0 +1,6 @@
++ srun python -u prueba.py
+
+real	19m59.174s
+user	0m0.024s
+sys	0m0.043s
++ date

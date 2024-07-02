@@ -1,0 +1,10 @@
++ srun python -u multivariate_regression.py
+/home/mind/jrobador/.local/miniconda3/envs/pavi/lib/python3.12/site-packages/sklearn/manifold/_mds.py:298: FutureWarning: The default value of `normalized_stress` will change to `'auto'` in version 1.4. To suppress this warning, manually set the value of `normalized_stress`.
+  warnings.warn(
+/home/mind/jrobador/.local/miniconda3/envs/pavi/lib/python3.12/site-packages/sklearn/manifold/_mds.py:298: FutureWarning: The default value of `normalized_stress` will change to `'auto'` in version 1.4. To suppress this warning, manually set the value of `normalized_stress`.
+  warnings.warn(
+
+real	37m28.707s
+user	0m0.044s
+sys	0m0.071s
++ date
