@@ -22,11 +22,25 @@ The workflow is the following one:
 Cross-validation has the following scheme:
 ![grid_search_cross_validation](https://scikit-learn.org/stable/_images/grid_search_cross_validation.png)
 
+### Different cross validation strategies
+
+#### K-Fold
+
+KFold divides all the samples in groups of samples, called folds (if k=n this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using k-1 folds, and the fold left out is used for test.
+
+#### Repeated K-Fold
+
+RepeatedKFold repeats K-Fold n times. It can be used when one requires to run KFold n times, producing different splits in each repetition. It works if you want to compute standard deviation in the experiments.
+
+#### Leave One Out (LOO)
+
+LeaveOneOut (or LOO) is a simple cross-validation. Each learning set is created by taking all the samples except one, the test set being the sample left out. Thus, for n samples, we have n different training sets and n different tests set. This cross-validation procedure does not waste much data as only one sample is removed from the training set.
+
+LOO cross-validation, although exhaustive, is more computationally expensive and tends to have high variance. In comparison, k-fold cross validation (with k=5 k=5 or k=10) is more efficient and provides more stable estimates of the generalization error. For these reasons, k-fold is generally the preferred choice for model selection and performance evaluation.
+
 ## Tuning hyper-parameters of an estimator
 
-
 ## Tuning the decision of threshold for class prediction
-
 
 ## Metrics and scoring: quantifying the quality of predictions
 
