@@ -33,6 +33,9 @@ from sklearn.model_selection import StratifiedShuffleSplit
 import warnings
 warnings.filterwarnings("ignore")
 
+from scipy.stats import norm
+
+
 #%%
 # Have first sense of dataset
 
@@ -97,8 +100,28 @@ plt.suptitle('Transaction Amount and Time Distributions', fontsize=16, y=1.05)
 ax[0].grid(True, linestyle='--', alpha=0.7)
 ax[1].grid(True, linestyle='--', alpha=0.7)
 
-plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/distribution_plots_2.png")
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/distribution_plots.png")
+plt.clf()
+#%%
+# Plot the normal distribution for 'Amount' and 'Time'
+fig, ax = plt.subplots(1, 2, figsize=(18, 4))
+# Amount distribution
+mu_amount, std_amount = norm.fit(amount_val)
+x_amount = np.linspace(min(amount_val), max(amount_val), 100)
+p_amount = norm.pdf(x_amount, mu_amount, std_amount)
+ax[0].plot(x_amount, p_amount, 'r-', linewidth=2)
+ax[0].set_title('Normal Distribution of Transaction Amount', fontsize=14)
+
+# Time distribution
+mu_time, std_time = norm.fit(time_val)
+x_time = np.linspace(min(time_val), max(time_val), 100)
+p_time = norm.pdf(x_time, mu_time, std_time)
+ax[1].plot(x_time, p_time, 'b-', linewidth=2)
+ax[1].set_title('Normal Distribution of Transaction Time', fontsize=14)
+
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/normal_distributions.png")
 plt.close()
+
 # %%
 # Scaling Time and amount (non-scaled yet)
 
@@ -136,6 +159,9 @@ print('-' * 100)
 print('Label Distributions:')
 print(train_counts_label/ len(original_ytrain))
 print(test_counts_label/ len(original_ytest))
+
+
+# Test distribution
 
 #%%
 # Subsampling
