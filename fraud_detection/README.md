@@ -219,7 +219,46 @@ Create predictive models to accurately detect whether a transaction is normal or
 | Median  | Middle value when data is sorted.   | No                    | Skewed Distributions      |
 | Mode    | Most frequent value in the dataset. | No                    | For Categorical Data      |
 
+**Normal Distribution**
 
+The **normal distribution**, also known as the **Gaussian distribution**, is a continuous probability distribution that is symmetrical about its mean. It is characterized by its bell-shaped curve, which is known as the Gaussian function. The normal distribution is widely used in statistics, natural and social sciences, and is the foundation for many statistical methods.
+
+### Key Properties
+
+1. **Symmetry**: The normal distribution is perfectly symmetrical around its mean. This means that the left and right halves of the distribution are mirror images of each other.
+
+2. **Mean, Median, and Mode**: In a normal distribution, the mean, median, and mode are all equal and located at the center of the distribution.
+
+3. **Bell-Shaped Curve**: The curve is bell-shaped, with the highest point at the mean. The probability of values decreases as you move away from the mean.
+
+4. **Asymptotic**: The tails of the distribution approach, but never touch, the horizontal axis. This means that there are theoretically no limits to the values that can be observed.
+
+5. **Empirical Rule (68-95-99.7 Rule)**:
+   - Approximately **68%** of the data falls within one standard deviation of the mean.
+   - Approximately **95%** falls within two standard deviations.
+   - Approximately **99.7%** falls within three standard deviations.
+
+### Mathematical Formulation
+
+The probability density function (PDF) of a normal distribution is given by:
+
+\[ f(x|\mu, \sigma) = \frac{1}{\sigma \sqrt{2\pi}} e^{ -\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2 } \]
+
+where:
+- \( \mu \) is the **mean**.
+- \( \sigma \) is the **standard deviation**.
+- \( \sigma^2 \) is the **variance**.
+- \( x \) is the **variable**.
+
+### Examples of Normal Distribution
+
+1. **Heights of People**: Heights of individuals in a population tend to follow a normal distribution. Most people are of average height, with fewer people being extremely tall or short.
+  
+2. **Measurement Errors**: Measurement errors in scientific experiments often follow a normal distribution due to the central limit theorem, which states that the sum of many independent and identically distributed random variables tends towards a normal distribution, regardless of the original distribution of the variables.
+  
+3. **Test Scores**: Standardized test scores (e.g., IQ scores) are often normally distributed, with most students scoring near the average and fewer students scoring extremely high or low.
+
+![Normal Distribution](./plots/normal_distributions.png)
 
 ### Splitting data
 
