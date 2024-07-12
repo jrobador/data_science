@@ -223,7 +223,7 @@ Create predictive models to accurately detect whether a transaction is normal or
 
 The **normal distribution**, also known as the **Gaussian distribution**, is a continuous probability distribution that is symmetrical about its mean. It is characterized by its bell-shaped curve, which is known as the Gaussian function. The normal distribution is widely used in statistics, natural and social sciences, and is the foundation for many statistical methods.
 
-### Key Properties
+ Key Properties:
 
 1. **Symmetry**: The normal distribution is perfectly symmetrical around its mean. This means that the left and right halves of the distribution are mirror images of each other.
 
@@ -238,7 +238,6 @@ The **normal distribution**, also known as the **Gaussian distribution**, is a c
    - Approximately **95%** falls within two standard deviations.
    - Approximately **99.7%** falls within three standard deviations.
 
-### Mathematical Formulation
 
 The probability density function (PDF) of a normal distribution is given by:
 
@@ -250,7 +249,7 @@ where:
 - \( \sigma^2 \) is the **variance**.
 - \( x \) is the **variable**.
 
-### Examples of Normal Distribution
+Examples of Normal Distribution:
 
 1. **Heights of People**: Heights of individuals in a population tend to follow a normal distribution. Most people are of average height, with fewer people being extremely tall or short.
   
@@ -259,6 +258,10 @@ where:
 3. **Test Scores**: Standardized test scores (e.g., IQ scores) are often normally distributed, with most students scoring near the average and fewer students scoring extremely high or low.
 
 ![Normal Distribution](./plots/normal_distributions.png)
+
+### Standarization of data
+
+Since not all columns were standarized, we apply RobustScaler() because is less prone to outliers.
 
 ### Splitting data
 

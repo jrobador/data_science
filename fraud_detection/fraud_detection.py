@@ -125,7 +125,6 @@ plt.close()
 # %%
 # Scaling Time and amount (non-scaled yet)
 
-# RobustScaler is less prone to outliers.
 rob_scaler = RobustScaler()
 
 df['scaled_amount'] = rob_scaler.fit_transform(df['Amount'].values.reshape(-1,1))
@@ -141,11 +140,13 @@ y = df['Class']
 
 sss = StratifiedKFold(n_splits=5, random_state=None, shuffle=False)
 
-for train_index, test_index in sss.split(X, y):
-    print("Train:", train_index, "Test:", test_index)
+for i, (train_index, test_index) in enumerate(sss.split(X, y)):
+    print (i)
+    print("Train:", len(train_index), "Test:", len(test_index))
     original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
     original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
 
+# Converts the pandas DataFrame and Series objects to NumPy arrays. 
 original_Xtrain = original_Xtrain.values
 original_Xtest = original_Xtest.values
 original_ytrain = original_ytrain.values
@@ -154,19 +155,38 @@ original_ytest = original_ytest.values
 # See if both the train and test label distribution are similarly distributed
 train_unique_label, train_counts_label = np.unique(original_ytrain, return_counts=True)
 test_unique_label, test_counts_label = np.unique(original_ytest, return_counts=True)
+
+# Suppose original_ytrain is [0, 1, 0, 1, 0]:
+# train_unique_label will be [0, 1] (the unique labels).
+# train_counts_label will be [3, 2] (3 instances of label 0 and 2 instances of label 1).
+
 print('-' * 100)
 
 print('Label Distributions:')
 print(train_counts_label/ len(original_ytrain))
 print(test_counts_label/ len(original_ytest))
 
-
+print (train_counts_label)
 # Test distribution
 
 #%%
 # Subsampling
 # Approach: Take randomly the same proportion of non-fraud transaction to avoid wrong correlations.
+# With undersampling? Because our dataset is large enough and we can do it.
+# Just taking the same amount for each class.
 
+df = df.sample(frac=1)
+
+# amount of fraud classes 492 rows.
+fraud_df = df.loc[df['Class'] == 1]
+non_fraud_df = df.loc[df['Class'] == 0][:492]
+
+normal_distributed_df = pd.concat([fraud_df, non_fraud_df])
+
+# Shuffle dataframe rows
+new_df = normal_distributed_df.sample(frac=1, random_state=42)
+
+new_df.head()
 
 
 # %%
