@@ -316,23 +316,22 @@ where:
 *Covariance and Standard deviation definition reminder:*
 > Covariance is a measure of how two variables change together. It indicates the direction of the linear relationship between the variables. If the variables tend to increase or decrease together, the covariance is positive. If one variable tends to increase when the other decreases, the covariance is negative.
 > Standard deviation (SD) is a measure of the amount of variation or *dispersion of a set of values*. It indicates how spread out the values in a data set are from the mean. High SD means hat data points are spread out over a wider range of values. Low SD indicates that data points are closer to the mean.
-> 
-
-
-
 
 #### 2. Kendall Tau Correlation Coefficient
 
 **Definition**: The Kendall Tau correlation coefficient measures the ordinal association between two variables. It assesses how well the relationship between two variables can be described using a monotonic function.
 
 **Formula**:
+
 \[ \tau = \frac{(C - D)}{\sqrt{(C + D + T_X)(C + D + T_Y)}} \]
 where:
+
 - \(C\) is the number of concordant pairs
 - \(D\) is the number of discordant pairs
 - \(T_X\) and \(T_Y\) are the number of ties in \(X\) and \(Y\), respectively
 
 **Characteristics**:
+
 - **Range**: -1 to 1
 - **Interpretation**:
   - +1: Perfect agreement between rankings
@@ -342,19 +341,26 @@ where:
   - Non-parametric (no specific distribution assumptions).
   - More robust to outliers than Pearson.
 
-*Concordant/Discordant definition reminder:*
+*Concordant/Discordant definition reminder*:
+> A pair of observations \((X_i, Y_i)\) and \((X_j, Y_j)\) is **concordant** if \(X_i > X_j\) and \(Y_i > Y_j\), or \(X_i < X_j\) and \(Y_i < Y_j\).
+> A pair of observations \((X_i, Y_i)\) and \((X_j, Y_j)\) is **discordant** if \(X_i > X_j\) and \(Y_i < Y_j\), or \(X_i < X_j\) and \(Y_i > Y_j\).
+> Ties in X are number of pairs where the values of \(X\) are the same, i.e., \(X_i = X_j\).
+> Ties in Y are number of pairs where the values of \(Y\) are the same, i.e., \(Y_i = Y_j\).
 
 #### 3. Spearman Rank Correlation
 
 **Definition**: The Spearman rank correlation assesses how well the relationship between two variables can be described using a monotonic function. It converts the variables to ranks and then computes the Pearson correlation coefficient on the ranks.
 
 **Formula**:
+
 \[ \rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)} \]
 where:
+
 - \(d_i\) is the difference between the ranks of each pair of observations
 - \(n\) is the number of observations
 
 **Characteristics**:
+
 - **Range**: -1 to 1
 - **Interpretation**:
   - +1: Perfect positive monotonic relationship
@@ -365,7 +371,28 @@ where:
   - Can capture non-linear monotonic relationships.
   - More robust to outliers than Pearson.
 
-*ranks definition reminder:*
+*Ranks definition reminder:*
+> Ranks represent the ordinal position of a value within a sorted list of values. When data is ordered, the smallest value gets the rank of 1, the second smallest gets rank 2, and so forth.
+> Raw Scores
+> | Student | Score |
+> |---------|-------|
+> | A       | 85    |
+> | B       | 90    |
+> | C       | 78    |
+> | D       | 92    |
+> | E       | 85    |
+> 
+> Sorted Scores with Ranks
+> | Student | Score | Rank |
+> |---------|-------|------|
+> | C       | 78    | 1    |
+> | A       | 85    | 2.5  |
+> | E       | 85    | 2.5  |
+> | B       | 90    | 4    |
+> | D       | 92    | 5    |
+>
+> The scores of 85 are tied, so they get the average of ranks 2 and 3, which is 2.5.
+
 
 #### When to Use Each Correlation Method
 
