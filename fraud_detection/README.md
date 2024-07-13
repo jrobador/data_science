@@ -182,7 +182,7 @@ Create predictive models to accurately detect whether a transaction is normal or
 ### Dataset information
 
 - 284807 rows x 31 columns
-- The mean of transaction amount is 88.34961925093133. But since it is an imbalanced data, using the average of all values is not the best information about, since it is sensitive to ouliers. Median is the best central tendency measure, giving a value of 22.
+- The mean of transaction amount is 88.34961925093133. But since it is an imbalanced data, using the average of all values is not the best information about beacuse it is sensitive to ouliers. Median is the best central tendency measure, giving a value of 22.
 - No NaN Values in the dataframe.
 - You can know if a transaction was a fraud because it has a class column: 0 means non-fraudulent (99.83 %) meanwhile 1 means fraudulent transaction (0.173 %).
 
@@ -266,4 +266,141 @@ Since not all columns were standarized, we apply RobustScaler() because is less 
 ### Splitting data
 
 Before applying any under-sampling techniques, it’s crucial to separate the original dataframe. Although we will split the data during the implementation of Random Under-Sampling or Over-Sampling techniques, it is important to remember that we should test our models on the original testing set, not on the subset created by these techniques. The primary objective is to fit the model using the modified dataframes (that have been under-sampled or over-sampled) to help the model detect patterns, and then evaluate its performance on the untouched, original testing set.
+
+### Correlation Matrices
+
+We want to know if there are features that influence heavily in whether a specific transaction is a fraud. It is important that we use the correct dataframe (subsample) in order for us to see which features have a high positive or negative correlation with regards to fraud transactions. The question we must do is: Is this portion of data enough to explain or differentiate from our task?
+
+A correlation matrix is a table that shows the correlation coefficients between multiple variables. Each cell in the matrix displays the correlation between two variables. The value of the correlation coefficient ranges from -1 to 1:
+
+- +1 indicates a perfect positive linear relationship.
+- 0 indicates no linear relationship.
+- -1 indicates a perfect negative linear relationship.
+
+Importance of the Correlation Matrix
+
+- Understanding Relationships: It helps in identifying the strength and direction of relationships between pairs of variables.
+- Feature Selection: Highly correlated features might be redundant. Dropping one of them can simplify the model without losing much information.
+- Multicollinearity Detection: In regression analysis, multicollinearity occurs when predictor variables are highly correlated. This can inflate the variance of the coefficient estimates and make the model unstable.
+
+What correlation method exists? There are different correlation methods that pandas allows. For instance, on [pandas documentation](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html) says:
+> - pearson : standard correlation coefficient
+> - kendall : Kendall Tau correlation coefficient
+> - spearman : Spearman rank correlation
+> - callable: callable with input two 1d ndarrays and returning a float. Note that the returned matrix from corr will have 1 along the diagonals and will be symmetric regardless of the callable’s behavior.
+
+What are these coefficients and what is the meaning?
+
+#### 1. Pearson Correlation Coeficient
+
+ The Pearson correlation coefficient measures the linear relationship between two continuous variables:
+
+**Definition**: The Pearson correlation coefficient measures the linear relationship between two continuous variables.
+**Formula**:
+\[ \rho(X, Y) = \frac{\text{cov}(X, Y)}{\sigma_X \sigma_Y} \]
+where:
+- \(\text{cov}(X, Y)\) is the covariance of variables \(X\) and \(Y\)
+- \(\sigma_X\) and \(\sigma_Y\) are the standard deviations of \(X\) and \(Y\), respectively
+
+**Characteristics**:
+- **Range**: -1 to 1
+- **Interpretation**:
+  - +1: Perfect positive linear relationship
+  - 0: No linear relationship
+  - -1: Perfect negative linear relationship
+- **Assumptions**:
+  - Both variables should be normally distributed (for accurate interpretation).
+  - The relationship should be linear.
+  - Sensitive to outliers.
+
+*Covariance and Standard deviation definition reminder:*
+> Covariance is a measure of how two variables change together. It indicates the direction of the linear relationship between the variables. If the variables tend to increase or decrease together, the covariance is positive. If one variable tends to increase when the other decreases, the covariance is negative.
+> Standard deviation (SD) is a measure of the amount of variation or *dispersion of a set of values*. It indicates how spread out the values in a data set are from the mean. High SD means hat data points are spread out over a wider range of values. Low SD indicates that data points are closer to the mean.
+> 
+
+
+
+
+#### 2. Kendall Tau Correlation Coefficient
+
+**Definition**: The Kendall Tau correlation coefficient measures the ordinal association between two variables. It assesses how well the relationship between two variables can be described using a monotonic function.
+
+**Formula**:
+\[ \tau = \frac{(C - D)}{\sqrt{(C + D + T_X)(C + D + T_Y)}} \]
+where:
+- \(C\) is the number of concordant pairs
+- \(D\) is the number of discordant pairs
+- \(T_X\) and \(T_Y\) are the number of ties in \(X\) and \(Y\), respectively
+
+**Characteristics**:
+- **Range**: -1 to 1
+- **Interpretation**:
+  - +1: Perfect agreement between rankings
+  - 0: No association between rankings
+  - -1: Perfect disagreement between rankings
+- **Assumptions**:
+  - Non-parametric (no specific distribution assumptions).
+  - More robust to outliers than Pearson.
+
+*Concordant/Discordant definition reminder:*
+
+#### 3. Spearman Rank Correlation
+
+**Definition**: The Spearman rank correlation assesses how well the relationship between two variables can be described using a monotonic function. It converts the variables to ranks and then computes the Pearson correlation coefficient on the ranks.
+
+**Formula**:
+\[ \rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)} \]
+where:
+- \(d_i\) is the difference between the ranks of each pair of observations
+- \(n\) is the number of observations
+
+**Characteristics**:
+- **Range**: -1 to 1
+- **Interpretation**:
+  - +1: Perfect positive monotonic relationship
+  - 0: No monotonic relationship
+  - -1: Perfect negative monotonic relationship
+- **Assumptions**:
+  - Non-parametric.
+  - Can capture non-linear monotonic relationships.
+  - More robust to outliers than Pearson.
+
+*ranks definition reminder:*
+
+#### When to Use Each Correlation Method
+
+1. **Pearson Correlation**:
+   - Use when you assume a linear relationship between the variables.
+   - Suitable for normally distributed data.
+   - Sensitive to outliers.
+
+2. **Kendall Tau Correlation**:
+   - Use for ordinal data or when you need a measure of association that is more robust to outliers and non-normal distributions.
+   - Suitable for small sample sizes and when there are many ties.
+
+3. **Spearman Rank Correlation**:
+   - Use when the relationship between the variables is monotonic but not necessarily linear.
+   - Suitable for ordinal data or continuous data that do not meet the assumptions of Pearson.
+   - Robust to outliers and non-normal distributions.
+
+![Normal Distribution](./plots/corr_matrices.png)
+
+Features with + correlation with 'class' (Higher than 0.6:)
+
+- ['V4', 'V11']
+
+Features with - correlation with 'class' (Lower than 0.6:)
+
+- ['V10', 'V12', 'V14']
+
+Positive Correlation between features and class (Higher than 0.6):
+
+- V4: 0.71
+- V11: 0.69
+
+Negative Correlation between features and class (Lower than -0.6):
+
+- V10: -0.62
+- V12: -0.68
+- V14: -0.75
 

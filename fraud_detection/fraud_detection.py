@@ -45,20 +45,23 @@ df.head()
 df.describe()
 # %%
 # Check dataset information
+df_mean     = df["Amount"].mean()
+df_median   = df["Amount"].median()
+print (f"{df_mean=}")
+print (f"{df_median=}")
+print("Any NaN Value? {a}".format(a=df.isna().any().any()))
 
-print (df["Amount"].mean())
-print(df.isna().any().any())
-
+#Dataframe shape
+print (f"{df.shape=}")
 
 # Dataset is already categorized with fraudulent/non-fraudulent
-print (len(df))
-
-
 #How many are non-fraudulent?
-print (df['Class'].value_counts()[0])
+non_fraudulent = df['Class'].value_counts()[0]
+print (f"{non_fraudulent = }")
 
 #And how many are fraudulent?
-print (df['Class'].value_counts()[1])
+fraudulent = df['Class'].value_counts()[1]
+print (f"{fraudulent = }")
 
 print('No Frauds:', round(df['Class'].value_counts()[0]/len(df), 5))
 print('Frauds:', round(df['Class'].value_counts()[1]/len(df), 5))
@@ -101,7 +104,7 @@ ax[0].grid(True, linestyle='--', alpha=0.7)
 ax[1].grid(True, linestyle='--', alpha=0.7)
 
 plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/distribution_plots.png")
-plt.clf()
+plt.show()
 #%%
 # Plot the normal distribution for 'Amount' and 'Time'
 fig, ax = plt.subplots(1, 2, figsize=(18, 4))
@@ -118,19 +121,20 @@ x_time = np.linspace(min(time_val), max(time_val), 100)
 p_time = norm.pdf(x_time, mu_time, std_time)
 ax[1].plot(x_time, p_time, 'b-', linewidth=2)
 ax[1].set_title('Normal Distribution of Transaction Time', fontsize=14)
-
 plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/normal_distributions.png")
-plt.close()
-
+plt.show()
 # %%
 # Scaling Time and amount (non-scaled yet)
 
 rob_scaler = RobustScaler()
 
-df['scaled_amount'] = rob_scaler.fit_transform(df['Amount'].values.reshape(-1,1))
-df['scaled_time'] = rob_scaler.fit_transform(df['Time'].values.reshape(-1,1))
+df.insert(0, 'scaled_amount', rob_scaler.fit_transform(df['Amount'].values.reshape(-1,1)))
+df.insert(1, 'scaled_time',   rob_scaler.fit_transform(df['Time'].values.reshape(-1,1)))
 
 df.drop(['Time','Amount'], axis=1, inplace=True)
+
+print (df.columns)
+
 
 # %%
 # Splitting original DataFrame
@@ -159,34 +163,61 @@ test_unique_label, test_counts_label = np.unique(original_ytest, return_counts=T
 # Suppose original_ytrain is [0, 1, 0, 1, 0]:
 # train_unique_label will be [0, 1] (the unique labels).
 # train_counts_label will be [3, 2] (3 instances of label 0 and 2 instances of label 1).
-
 print('-' * 100)
 
 print('Label Distributions:')
-print(train_counts_label/ len(original_ytrain))
-print(test_counts_label/ len(original_ytest))
+print("For training labels (Fraud, no Fraud)" + str(train_counts_label/ len(original_ytrain)))
+print("For testing labels (Fraud, no Fraud) " + str(test_counts_label / len(original_ytest )))
 
 print (train_counts_label)
-# Test distribution
 
 #%%
 # Subsampling
 # Approach: Take randomly the same proportion of non-fraud transaction to avoid wrong correlations.
-# With undersampling? Because our dataset is large enough and we can do it.
-# Just taking the same amount for each class.
+# Why undersampling? Because our dataset is large enough and we can do it.
+# Just taking the same amount forWith each class.
 
 df = df.sample(frac=1)
 
-# amount of fraud classes 492 rows.
+nf = df['Class'].value_counts()[0]
+f = df['Class'].value_counts()[1]
+print ("Before subsampling:")
+print ("Non-Fraud Length:{a}, Fraud Length:{b}".format(a=nf, b=f))
+
 fraud_df = df.loc[df['Class'] == 1]
-non_fraud_df = df.loc[df['Class'] == 0][:492]
+non_fraud_df = df.loc[df['Class'] == 0][:len(fraud_df)]
+print ("After subsampling:")
+print ("Non-Fraud Length:{a}, Fraud Length:{b}".format(b=len(fraud_df), a=len(non_fraud_df)))
+
 
 normal_distributed_df = pd.concat([fraud_df, non_fraud_df])
 
 # Shuffle dataframe rows
 new_df = normal_distributed_df.sample(frac=1, random_state=42)
 
-new_df.head()
+# %%
+plt.figure(figsize=(24,20))
+sub_sample_corr = new_df.corr()
+sns.heatmap(sub_sample_corr, cmap='coolwarm_r', annot_kws={'size':20})
+plt.title('SubSample Correlation Matrix', fontsize=14)
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/corr_matrices.png")
+plt.show()
+# %%
+print ("Features with + correlation with 'class' (Higher than 0.6:)")
+print ([x for x in sub_sample_corr.columns if x != 'Class' and sub_sample_corr.loc[x, 'Class'] > 0.6])
 
+print ("Features with - correlation with 'class' (Lower than 0.6:)")
+print ([x for x in sub_sample_corr.columns if x != 'Class' and sub_sample_corr.loc[x, 'Class'] < (-0.6)])
 
+# Print positive correlation features (Higher than 0.4)
+print("Positive Correlation between features and class (Higher than 0.6):")
+for feature in sub_sample_corr.columns:
+    if feature != 'Class' and sub_sample_corr.loc[feature, 'Class'] > 0.6:
+        print(f"{feature}: {sub_sample_corr.loc[feature, 'Class']:.2f}")
+
+# Print negative correlation features (Lower than -0.4)
+print("Negative Correlation between features and class (Lower than -0.6):")
+for feature in sub_sample_corr.columns:
+    if feature != 'Class' and sub_sample_corr.loc[feature, 'Class'] < -0.6:
+        print(f"{feature}: {sub_sample_corr.loc[feature, 'Class']:.2f}")
 # %%
