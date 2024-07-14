@@ -136,7 +136,7 @@ df.drop(['Time','Amount'], axis=1, inplace=True)
 print (df.columns)
 
 
-# %%
+# %%color='r',
 # Splitting original DataFrame
 
 X = df.drop('Class', axis=1)
@@ -220,4 +220,151 @@ print("Negative Correlation between features and class (Lower than -0.6):")
 for feature in sub_sample_corr.columns:
     if feature != 'Class' and sub_sample_corr.loc[feature, 'Class'] < -0.6:
         print(f"{feature}: {sub_sample_corr.loc[feature, 'Class']:.2f}")
+        
+# %%
+f, axes = plt.subplots(ncols=3, figsize=(15,4))
+
+# Negative Correlations with our Class (The lower our feature value the more likely it will be a fraud transaction)
+sns.boxplot(x="Class", y="V10", data=new_df, ax=axes[0])
+axes[0].set_title('V10 vs Class Negative Correlation')
+
+sns.boxplot(x="Class", y="V12", data=new_df, ax=axes[1])
+axes[1].set_title('V12 vs Class Negative Correlation')
+
+sns.boxplot(x="Class", y="V14", data=new_df, ax=axes[2])
+axes[2].set_title('V14 vs Class Negative Correlation')
+
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/neg_corr.png")
+plt.show()
+
+f, axes = plt.subplots(ncols=2, figsize=(10,4))
+
+# Positive correlations (The higher the feature the probability increases that it will be a fraud transaction)
+
+sns.boxplot(x="Class", y="V4", data=new_df, ax=axes[0])
+axes[0].set_title('V4 vs Class Positive Correlation')
+
+sns.boxplot(x="Class", y="V11", data=new_df, ax=axes[1])
+axes[1].set_title('V11 vs Class Positive Correlation')
+
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/pos_corr.png")
+plt.show()
+
+# %%
+# Normal Distributions plots
+
+from scipy.stats import norm
+
+f, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(30, 8))
+
+# V14 Distribution (Fraud Transactions)
+v14_fraud_dist = new_df['V14'].loc[new_df['Class'] == 1].values
+sns.histplot(v14_fraud_dist, ax=ax1, color='r', kde=True, stat="density", label='KDE')
+x_vals = np.linspace(min(v14_fraud_dist), max(v14_fraud_dist), 100)
+ax1.plot(x_vals, norm.pdf(x_vals, np.mean(v14_fraud_dist), np.std(v14_fraud_dist)), color='orange', linestyle='--', linewidth=1.5, label='Normal Distribution Fit')
+ax1.set_title('V14 Distribution \n (Fraud Transactions)', fontsize=14)
+ax1.legend()
+
+# V12 Distribution (Fraud Transactions)
+v12_fraud_dist = new_df['V12'].loc[new_df['Class'] == 1].values
+sns.histplot(v12_fraud_dist, ax=ax2, color='r', kde=True, stat="density", label='KDE')
+x_vals = np.linspace(min(v12_fraud_dist), max(v12_fraud_dist), 100)
+ax2.plot(x_vals, norm.pdf(x_vals, np.mean(v12_fraud_dist), np.std(v12_fraud_dist)), color='orange', linestyle='--', linewidth=1.5, label='Normal Distribution Fit')
+ax2.set_title('V12 Distribution \n (Fraud Transactions)', fontsize=14)
+ax2.legend()
+
+# V10 Distribution (Fraud Transactions)
+v10_fraud_dist = new_df['V10'].loc[new_df['Class'] == 1].values
+sns.histplot(v10_fraud_dist, ax=ax3, color='r', kde=True, stat="density", label='KDE')
+x_vals = np.linspace(min(v10_fraud_dist), max(v10_fraud_dist), 100)
+ax3.plot(x_vals, norm.pdf(x_vals, np.mean(v10_fraud_dist), np.std(v10_fraud_dist)), color='orange', linestyle='--', linewidth=1.5, label='Normal Distribution Fit')
+ax3.set_title('V10 Distribution \n (Fraud Transactions)', fontsize=14)
+ax3.legend()
+
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/negft_distr.png")
+plt.show()
+# %%
+# Anomaly elimination
+
+# V14 removing outliers from fraud transactions
+v14_fraud = new_df['V14'].loc[new_df['Class'] == 1].values
+q25, q75 = np.percentile(v14_fraud, 25), np.percentile(v14_fraud, 75)
+print('Quartile 25 for V14: {} | Quartile 75 for V14: {}'.format(q25, q75))
+v14_iqr = q75 - q25
+print('iqr: {}'.format(v14_iqr))
+
+v14_cut_off = v14_iqr * 1.5
+v14_lower, v14_upper = q25 - v14_cut_off, q75 + v14_cut_off
+print('Cut Off: {}'.format(v14_cut_off))
+print('V14 Lower: {}'.format(v14_lower))
+print('V14 Upper: {}'.format(v14_upper))
+
+outliers = [x for x in v14_fraud if x < v14_lower or x > v14_upper]
+print('V14 outliers:{}'.format(outliers))
+print('Feature V14 Outliers for Fraud Cases: {}'.format(len(outliers)))
+
+new_df = new_df.drop(new_df[(new_df['V14'] > v14_upper) | (new_df['V14'] < v14_lower)].index)
+print('Number of Instances after outliers removal: {}'.format(len(new_df)))
+
+
+print('----' * 10)
+
+# V12 removing outliers from fraud transactions
+v12_fraud = new_df['V12'].loc[new_df['Class'] == 1].values
+q25, q75 = np.percentile(v12_fraud, 25), np.percentile(v12_fraud, 75)
+v12_iqr = q75 - q25
+
+v12_cut_off = v12_iqr * 1.5
+v12_lower, v12_upper = q25 - v12_cut_off, q75 + v12_cut_off
+print('V12 Lower: {}'.format(v12_lower))
+print('V12 Upper: {}'.format(v12_upper))
+outliers = [x for x in v12_fraud if x < v12_lower or x > v12_upper]
+print('V12 outliers: {}'.format(outliers))
+print('Feature V12 Outliers for Fraud Cases: {}'.format(len(outliers)))
+
+new_df = new_df.drop(new_df[(new_df['V12'] > v12_upper) | (new_df['V12'] < v12_lower)].index)
+print('Number of Instances after outliers removal: {}'.format(len(new_df)))
+print('----' * 10)
+
+
+# V10 removing outliers from fraud transactions
+v10_fraud = new_df['V10'].loc[new_df['Class'] == 1].values
+q25, q75 = np.percentile(v10_fraud, 25), np.percentile(v10_fraud, 75)
+v10_iqr = q75 - q25
+
+v10_cut_off = v10_iqr * 1.5
+v10_lower, v10_upper = q25 - v10_cut_off, q75 + v10_cut_off
+print('V10 Lower: {}'.format(v10_lower))
+print('V10 Upper: {}'.format(v10_upper))
+outliers = [x for x in v10_fraud if x < v10_lower or x > v10_upper]
+print('Feature V10 Outliers for Fraud Cases: {}'.format(len(outliers)))
+print('V10 outliers: {}'.format(outliers))
+
+new_df = new_df.drop(new_df[(new_df['V10'] > v10_upper) | (new_df['V10'] < v10_lower)].index)
+
+print('Number of Instances after outliers removal: {}'.format(len(new_df)))
+# %%
+new_df.head()
+
+# %%
+#Botplox without outliers
+ 
+f,(ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,6))
+
+# Boxplots with outliers removed
+# Feature V14
+sns.boxplot(x="Class", y="V14", data=new_df,ax=ax1)
+ax1.set_title("V14 Feature \n Reduction of outliers", fontsize=14)
+
+# Feature 12
+sns.boxplot(x="Class", y="V12", data=new_df, ax=ax2)
+ax2.set_title("V12 Feature \n Reduction of outliers", fontsize=14)
+
+# Feature V10
+sns.boxplot(x="Class", y="V10", data=new_df, ax=ax3)
+ax3.set_title("V10 Feature \n Reduction of outliers", fontsize=14)
+
+
+plt.savefig("/home/jrobador/GITHUB/data_science/fraud_detection/plots/neg_corr_nools.png")
+plt.show() 
 # %%

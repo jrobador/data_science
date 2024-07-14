@@ -8,9 +8,6 @@ Create predictive models to accurately detect whether a transaction is normal or
 
 1. Imbalanced datasets are those where there is a severe skew in the class distribution, such as 1:100 or 1:1000 examples in the minority class to the majority class. This bias in the training dataset can influence many machine learning algorithms, leading some to ignore the minority class entirely. This is a problem as it is typically the minority class on which predictions are most important. One approach to addressing the problem of class imbalance is to randomly resample the training dataset. The two main approaches to randomly resampling an imbalanced dataset are to delete examples from the majority class, called **undersampling**, and to duplicate examples from the minority class, called **oversampling**. Both techniques can be used for two-class (binary) classification problems and multi-class classification problems with one or more majority or minority classes. Importantly, the change to the class distribution is only applied to the training dataset. The intent is to influence the fit of the models. The resampling is not applied to the test or holdout dataset used to evaluate the performance of a model. (See more in the repository of MIT+SCIKITLEARN:fundamentals).
 
-
-
-
 ### Dataset example
 
 <div>
@@ -238,12 +235,12 @@ The **normal distribution**, also known as the **Gaussian distribution**, is a c
    - Approximately **95%** falls within two standard deviations.
    - Approximately **99.7%** falls within three standard deviations.
 
-
 The probability density function (PDF) of a normal distribution is given by:
 
 \[ f(x|\mu, \sigma) = \frac{1}{\sigma \sqrt{2\pi}} e^{ -\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2 } \]
 
 where:
+
 - \( \mu \) is the **mean**.
 - \( \sigma \) is the **standard deviation**.
 - \( \sigma^2 \) is the **variance**.
@@ -259,7 +256,7 @@ Examples of Normal Distribution:
 
 ![Normal Distribution](./plots/normal_distributions.png)
 
-### Standarization of data
+## Standarization of data
 
 Since not all columns were standarized, we apply RobustScaler() because is less prone to outliers.
 
@@ -267,7 +264,7 @@ Since not all columns were standarized, we apply RobustScaler() because is less 
 
 Before applying any under-sampling techniques, it’s crucial to separate the original dataframe. Although we will split the data during the implementation of Random Under-Sampling or Over-Sampling techniques, it is important to remember that we should test our models on the original testing set, not on the subset created by these techniques. The primary objective is to fit the model using the modified dataframes (that have been under-sampled or over-sampled) to help the model detect patterns, and then evaluate its performance on the untouched, original testing set.
 
-### Correlation Matrices
+## Correlation Matrices
 
 We want to know if there are features that influence heavily in whether a specific transaction is a fraud. It is important that we use the correct dataframe (subsample) in order for us to see which features have a high positive or negative correlation with regards to fraud transactions. The question we must do is: Is this portion of data enough to explain or differentiate from our task?
 
@@ -284,6 +281,7 @@ Importance of the Correlation Matrix
 - Multicollinearity Detection: In regression analysis, multicollinearity occurs when predictor variables are highly correlated. This can inflate the variance of the coefficient estimates and make the model unstable.
 
 What correlation method exists? There are different correlation methods that pandas allows. For instance, on [pandas documentation](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html) says:
+
 > - pearson : standard correlation coefficient
 > - kendall : Kendall Tau correlation coefficient
 > - spearman : Spearman rank correlation
@@ -291,7 +289,7 @@ What correlation method exists? There are different correlation methods that pan
 
 What are these coefficients and what is the meaning?
 
-#### 1. Pearson Correlation Coeficient
+### 1. Pearson Correlation Coeficient
 
  The Pearson correlation coefficient measures the linear relationship between two continuous variables:
 
@@ -299,10 +297,12 @@ What are these coefficients and what is the meaning?
 **Formula**:
 \[ \rho(X, Y) = \frac{\text{cov}(X, Y)}{\sigma_X \sigma_Y} \]
 where:
+
 - \(\text{cov}(X, Y)\) is the covariance of variables \(X\) and \(Y\)
 - \(\sigma_X\) and \(\sigma_Y\) are the standard deviations of \(X\) and \(Y\), respectively
 
 **Characteristics**:
+
 - **Range**: -1 to 1
 - **Interpretation**:
   - +1: Perfect positive linear relationship
@@ -317,7 +317,7 @@ where:
 > Covariance is a measure of how two variables change together. It indicates the direction of the linear relationship between the variables. If the variables tend to increase or decrease together, the covariance is positive. If one variable tends to increase when the other decreases, the covariance is negative.
 > Standard deviation (SD) is a measure of the amount of variation or *dispersion of a set of values*. It indicates how spread out the values in a data set are from the mean. High SD means hat data points are spread out over a wider range of values. Low SD indicates that data points are closer to the mean.
 
-#### 2. Kendall Tau Correlation Coefficient
+### 2. Kendall Tau Correlation Coefficient
 
 **Definition**: The Kendall Tau correlation coefficient measures the ordinal association between two variables. It assesses how well the relationship between two variables can be described using a monotonic function.
 
@@ -347,7 +347,7 @@ where:
 > Ties in X are number of pairs where the values of \(X\) are the same, i.e., \(X_i = X_j\).
 > Ties in Y are number of pairs where the values of \(Y\) are the same, i.e., \(Y_i = Y_j\).
 
-#### 3. Spearman Rank Correlation
+### 3. Spearman Rank Correlation
 
 **Definition**: The Spearman rank correlation assesses how well the relationship between two variables can be described using a monotonic function. It converts the variables to ranks and then computes the Pearson correlation coefficient on the ranks.
 
@@ -381,7 +381,7 @@ where:
 > | C       | 78    |
 > | D       | 92    |
 > | E       | 85    |
-> 
+>
 > Sorted Scores with Ranks
 > | Student | Score | Rank |
 > |---------|-------|------|
@@ -393,8 +393,7 @@ where:
 >
 > The scores of 85 are tied, so they get the average of ranks 2 and 3, which is 2.5.
 
-
-#### When to Use Each Correlation Method
+### When to Use Each Correlation Method
 
 1. **Pearson Correlation**:
    - Use when you assume a linear relationship between the variables.
@@ -410,24 +409,57 @@ where:
    - Suitable for ordinal data or continuous data that do not meet the assumptions of Pearson.
    - Robust to outliers and non-normal distributions.
 
-![Normal Distribution](./plots/corr_matrices.png)
-
-Features with + correlation with 'class' (Higher than 0.6:)
-
-- ['V4', 'V11']
-
-Features with - correlation with 'class' (Lower than 0.6:)
-
-- ['V10', 'V12', 'V14']
+![Correlation Matrices](./plots/corr_matrices.png)
 
 Positive Correlation between features and class (Higher than 0.6):
 
 - V4: 0.71
 - V11: 0.69
 
+![Positive Correlation](./plots/pos_corr.png)
+
 Negative Correlation between features and class (Lower than -0.6):
 
 - V10: -0.62
 - V12: -0.68
 - V14: -0.75
+
+![Negative Correlation](./plots/neg_corr.png)
+
+## Distribution visualization
+
+- Kernel Density Estimate (KDE): The KDE line (smooth curve) represents a non-parametric way to estimate the probability density function of a random variable. It's a smoothed version of the histogram that can provide a more accurate representation of the data distribution.
+- Normal Distribution Fit: The normal distribution fit line (dashed curve) represents the theoretical normal distribution based on the mean and standard deviation of the data.
+
+![Normal Dist for features](./plots/negft_distr.png)
+
+## Anomaly Detection
+
+Inspecting the correlation boxplot we can see that there are a lot of negative outliers. We are going to remove them with IRM. I think also is possible to do the same with V11 vs Class Positive but we are not going to do it. The methodology is exaclty the same.
+
+Outliers can have many causes, such as:
+
+- Measurement or input error.
+- Data corruption.
+- True outlier observation (e.g. Michael Jordan in basketball).
+
+Removing extreme outliers from features that have a high correlation with our classes could be crucial for several reasons:
+
+1. **Improves Model Performance reducing Bias**: Outliers can influence the model's learning process. Since these points are far from the majority of the data, they can pull the model's decision boundary in a wrong direction, leading to biased predictions. Features with high correlation to the class variable have a strong influence on the model's decisions. Removing outliers in these features specifically helps mitigate this biasing effect and allows the model to learn a more accurate representation of the relationship between the feature and the class.
+2. **Improves Model Generalizability**:  If extreme outliers represent errors in data collection or measurement, these errors can confuse the model and make it less generalizable to unseen data.
+
+However, this does not mean that the values identified are outliers and should be removed. A good approach is to consider plotting the identified outlier values, perhaps in the context of non-outlier values to see if there are any systematic relationship or pattern to the outliers. If there is, perhaps they are not outliers and can be explained, or perhaps the outliers themselves can be identified more systematically.
+
+### Interquartile Range Method
+
+- Interquartile Range (IQR): We calculate this by the difference between the 75th percentile and 25th percentile. Our aim is to create a threshold beyond the 75th and 25th percentile that in case some instance pass this threshold the instance will be deleted.
+- Boxplots: Besides easily seeing the 25th and 75th percentiles (both end of the squares) it is also easy to see extreme outliers (points beyond the lower and higher extreme).
+
+![IRM Negative Correlations](./plots/neg_corr_nools.png)
+
+## Dimensionality Reduction and Clustering
+
+### T-SNE
+
+This gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
 
