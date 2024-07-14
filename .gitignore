@@ -1,0 +1,2 @@
+# Ignore the specific creditcard.csv file
+fraud_detection/data/
