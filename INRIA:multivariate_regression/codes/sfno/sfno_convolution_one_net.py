@@ -233,7 +233,7 @@ for iter in range(1001):
     loss.backward()
 
     # Optimization step
-    optim_left.step()
+    optim_right.step()
 
     # Append and print loss
     loss_value = loss.item()
@@ -297,10 +297,15 @@ print (nd_inverse_one_subject_right.shape)
 # %%
 fig_3 = plotting.view_surf(hcp.mesh.inflated, np.hstack([nd_inverse_one_subject_left, nd_inverse_one_subject_right]).clip(0, 1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
+
+file_name = "autoenc_output.html"
+fig_3.save_as_html(os.path.join(DIR,file_name))
+plt.close()
+
 # %%
-fig_3
+fig_1
 # %%
 fig_2
 # %%
-fig_1
+fig_3
 # %%
