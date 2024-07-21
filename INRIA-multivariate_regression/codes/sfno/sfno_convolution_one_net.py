@@ -21,10 +21,8 @@ import os
 import hcp_utils as hcp
 import torch_harmonics
 import nilearn.plotting as plotting
-import hcp_utils as hcp
 
-
-DIR = "/home/mind/jrobador/theta_s_dataset/plots/one_net"
+DIR = r'C:\Github\data_science\INRIA-multivariate_regression\codes\sfno\figures'
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print (DEVICE)
@@ -38,7 +36,7 @@ def compute_new_angles_grid(nlat, nlon):
 
 # Data and vertices representation
 
-file_path = os.path.join('/home/mind/jrobador/3_camcan', f'12_mean_sample_post.pt')
+file_path = os.path.join(r'C:\Github\pavi_data', '12_mean_sample_post.pt')
 sample = torch.load(file_path, map_location=DEVICE)
 
 temperature = 1
@@ -268,7 +266,7 @@ predicted_reshaped_left = predicted_left.reshape(predicted_left.shape[0], np.pro
 print ("Autoencoder output left reshaped to:")
 print (predicted_reshaped_left.shape)
 
-sh_inverse = sf_to_sh(predicted_reshaped_left, sphere_dst, sh_order_max=20)
+sh_inverse = sf_to_sh(predicted_reshaped_left.cpu(), sphere_dst, sh_order_max=20)
 print(sh_inverse.shape)
 
 new_data_inverse_left = sh_to_sf(sh_inverse, sphere_src, sh_order_max=20)
@@ -279,7 +277,7 @@ predicted_reshaped_right = predicted_right.reshape(predicted_right.shape[0], np.
 print ("Autoencoder output right reshaped to:")
 print (predicted_reshaped_right.shape)
 
-sh_inverse = sf_to_sh(predicted_reshaped_right, sphere_dst, sh_order_max=20)
+sh_inverse = sf_to_sh(predicted_reshaped_right.cpu(), sphere_dst, sh_order_max=20)
 print(sh_inverse.shape)
 
 new_data_inverse_right = sh_to_sf(sh_inverse, sphere_src, sh_order_max=20)
