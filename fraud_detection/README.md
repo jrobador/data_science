@@ -237,14 +237,14 @@ The **normal distribution**, also known as the **Gaussian distribution**, is a c
 
 The probability density function (PDF) of a normal distribution is given by:
 
-\[ f(x|\mu, \sigma) = \frac{1}{\sigma \sqrt{2\pi}} e^{ -\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2 } \]
+$$ f(x|\mu, \sigma) = \frac{1}{\sigma \sqrt{2\pi}} e^{ -\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2 } $$
 
 where:
 
-- \( \mu \) is the **mean**.
-- \( \sigma \) is the **standard deviation**.
-- \( \sigma^2 \) is the **variance**.
-- \( x \) is the **variable**.
+- $ \mu $ is the **mean**.
+- $ \sigma $ is the **standard deviation**.
+- $ \sigma^2 $ is the **variance**.
+- $ x $ is the **variable**.
 
 Examples of Normal Distribution:
 
@@ -295,11 +295,11 @@ What are these coefficients and what is the meaning?
 
 **Definition**: The Pearson correlation coefficient measures the linear relationship between two continuous variables.
 **Formula**:
-\[ \rho(X, Y) = \frac{\text{cov}(X, Y)}{\sigma_X \sigma_Y} \]
+$$ \rho(X, Y) = \frac{\text{cov}(X, Y)}{\sigma_X \sigma_Y} $$
 where:
 
-- \(\text{cov}(X, Y)\) is the covariance of variables \(X\) and \(Y\)
-- \(\sigma_X\) and \(\sigma_Y\) are the standard deviations of \(X\) and \(Y\), respectively
+- $\text{cov}(X, Y)$ is the covariance of variables $X$ and $Y$
+- $\sigma_X$ and $\sigma_Y$ are the standard deviations of $X$ and $Y$, respectively
 
 **Characteristics**:
 
@@ -323,12 +323,12 @@ where:
 
 **Formula**:
 
-\[ \tau = \frac{(C - D)}{\sqrt{(C + D + T_X)(C + D + T_Y)}} \]
+$$ \tau = \frac{(C - D)}{\sqrt{(C + D + T_X)(C + D + T_Y)}}$$
 where:
 
-- \(C\) is the number of concordant pairs
-- \(D\) is the number of discordant pairs
-- \(T_X\) and \(T_Y\) are the number of ties in \(X\) and \(Y\), respectively
+- $C$ is the number of concordant pairs
+- $D$ is the number of discordant pairs
+- $T_X$ and $T_Y$ are the number of ties in $X$ and $Y$, respectively
 
 **Characteristics**:
 
@@ -342,10 +342,10 @@ where:
   - More robust to outliers than Pearson.
 
 *Concordant/Discordant definition reminder*:
-> A pair of observations \((X_i, Y_i)\) and \((X_j, Y_j)\) is **concordant** if \(X_i > X_j\) and \(Y_i > Y_j\), or \(X_i < X_j\) and \(Y_i < Y_j\).
-> A pair of observations \((X_i, Y_i)\) and \((X_j, Y_j)\) is **discordant** if \(X_i > X_j\) and \(Y_i < Y_j\), or \(X_i < X_j\) and \(Y_i > Y_j\).
-> Ties in X are number of pairs where the values of \(X\) are the same, i.e., \(X_i = X_j\).
-> Ties in Y are number of pairs where the values of \(Y\) are the same, i.e., \(Y_i = Y_j\).
+> A pair of observations $(X_i, Y_i)$ and $(X_j, Y_j)$ is **concordant** if $X_i > X_j$ and $Y_i > Y_j$, or $X_i < X_j$ and $Y_i < Y_j$.
+> A pair of observations $(X_i, Y_i)$ and $(X_j, Y_j)$ is **discordant** if $X_i > X_j$ and $Y_i < Y_j$, or $X_i < X_j$ and $Y_i > Y_j$.
+> Ties in X are number of pairs where the values of $X$ are the same, i.e., $X_i = X_j$.
+> Ties in Y are number of pairs where the values of $Y$ are the same, i.e., $Y_i = Y_j$.
 
 ### 3. Spearman Rank Correlation
 
@@ -353,11 +353,11 @@ where:
 
 **Formula**:
 
-\[ \rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)} \]
+$$ \rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)} $$
 where:
 
-- \(d_i\) is the difference between the ranks of each pair of observations
-- \(n\) is the number of observations
+- $d_i$ is the difference between the ranks of each pair of observations
+- $n$ is the number of observations
 
 **Characteristics**:
 
@@ -459,7 +459,66 @@ However, this does not mean that the values identified are outliers and should b
 
 ## Dimensionality Reduction and Clustering
 
-### T-SNE
-
 This gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
+
+### t-SNE
+
+t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional data set and reduces it to a low dimensional graph that retains a lot of the original information. What T-SNE does is find a way to project data into a low dimensional space so the clustering in the high dimensional space is preserved.
+
+#### High-Dimensional Space:
+
+- In the original high-dimensional space, t-SNE measures pairwise similarities between data points.
+- Similarities are modeled using a probability distribution that measures the likelihood of points being close to each other.
+
+#### Low-Dimensional Space:
+
+- t-SNE aims to map the data points to a lower-dimensional space (typically 2D or 3D) while preserving the structure (local relationships) of the high-dimensional data.
+
+#### Steps in t-SNE:
+
+1. Compute Pairwise Affinities in High-Dimensional Space:
+
+   - For each pair of data points $ i $ and $ j $ in the high-dimensional space, compute the conditional probability $ p_{j|i} $ that point $ j $ would pick point $ i $ as its neighbor given a Gaussian distribution centered at $ i $. The similarity $ p_{ij} $ is then symmetrized:
+     $$
+     p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}
+     $$
+     
+   - The perplexity parameter controls the effective number of neighbors considered for each point.
+
+2. Define Pairwise Affinities in Low-Dimensional Space:
+   - In the low-dimensional space, the similarity between points $ i $ and $ j $ is modeled using a Student's t-distribution with one degree of freedom (which has heavier tails than a Gaussian):
+     $$
+     q_{ij} = \frac{(1 + \|y_i - y_j\|^2)^{-1}}{\sum_{k \neq l} (1 + \|y_k - y_l\|^2)^{-1}}
+     $$
+
+   - Here, $ y_i $ and $ y_j $ are the low-dimensional counterparts of the high-dimensional points $ x_i $ and $ x_j $.
+
+3. Minimize the Kullback-Leibler Divergence:
+   - The positions in the low-dimensional space are found by minimizing the Kullback-Leibler (KL) divergence between the joint probabilities $ P $ and $ Q $:
+     $$
+     KL(P \| Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}}
+     $$
+
+   - This minimization is typically performed using gradient descent, iteratively adjusting the positions of points in the low-dimensional space to better match the high-dimensional similarities.
+
+
+
+> This gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
+
+![T-SNE](./plots/tsne.png)
+
+## Clustering
+
+### Logistic Regression
+
+### KNeighborsClassifier
+
+### SVC
+
+### DecisionTreeClassifier
+
+## GridSearchCV
+
+## Learning Curves
+
 

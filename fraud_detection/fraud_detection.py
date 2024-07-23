@@ -1,37 +1,28 @@
 #%%
 import numpy as np 
 import pandas as pd 
-
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.preprocessing import RobustScaler
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 
-import matplotlib.patches as mpatches
-import time
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-import collections
+
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
-from sklearn.pipeline import make_pipeline
+
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
 
 from imblearn.pipeline import make_pipeline as imbalanced_make_pipeline
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import NearMiss
 from imblearn.metrics import classification_report_imbalanced
-
-from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
-from collections import Counter
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedShuffleSplit
-import warnings
-warnings.filterwarnings("ignore")
 
 from scipy.stats import norm
 
@@ -103,7 +94,7 @@ plt.suptitle('Transaction Amount and Time Distributions', fontsize=16, y=1.05)
 ax[0].grid(True, linestyle='--', alpha=0.7)
 ax[1].grid(True, linestyle='--', alpha=0.7)
 
-plt.savefig("./fraud_detection/plots/distribution_plots.png")
+plt.savefig("./plots/distribution_plots.png")
 plt.show()
 #%%
 # Plot the normal distribution for 'Amount' and 'Time'
@@ -121,7 +112,7 @@ x_time = np.linspace(min(time_val), max(time_val), 100)
 p_time = norm.pdf(x_time, mu_time, std_time)
 ax[1].plot(x_time, p_time, 'b-', linewidth=2)
 ax[1].set_title('Normal Distribution of Transaction Time', fontsize=14)
-plt.savefig("./fraud_detection/plots/normal_distributions.png")
+plt.savefig("./plots/normal_distributions.png")
 plt.show()
 # %%
 # Scaling Time and amount (non-scaled yet)
@@ -200,7 +191,7 @@ plt.figure(figsize=(24,20))
 sub_sample_corr = new_df.corr()
 sns.heatmap(sub_sample_corr, cmap='coolwarm_r', annot_kws={'size':20})
 plt.title('SubSample Correlation Matrix', fontsize=14)
-plt.savefig("./fraud_detection/plots/corr_matrices.png")
+plt.savefig("./plots/corr_matrices.png")
 plt.show()
 # %%
 print ("Features with + correlation with 'class' (Higher than 0.6:)")
@@ -234,7 +225,7 @@ axes[1].set_title('V12 vs Class Negative Correlation')
 sns.boxplot(x="Class", y="V14", data=new_df, ax=axes[2])
 axes[2].set_title('V14 vs Class Negative Correlation')
 
-plt.savefig("./fraud_detection/plots/neg_corr.png")
+plt.savefig("./plots/neg_corr.png")
 plt.show()
 
 f, axes = plt.subplots(ncols=2, figsize=(10,4))
@@ -247,7 +238,7 @@ axes[0].set_title('V4 vs Class Positive Correlation')
 sns.boxplot(x="Class", y="V11", data=new_df, ax=axes[1])
 axes[1].set_title('V11 vs Class Positive Correlation')
 
-plt.savefig("./fraud_detection/plots/pos_corr.png")
+plt.savefig("./plots/pos_corr.png")
 plt.show()
 
 # %%
@@ -281,7 +272,7 @@ ax3.plot(x_vals, norm.pdf(x_vals, np.mean(v10_fraud_dist), np.std(v10_fraud_dist
 ax3.set_title('V10 Distribution \n (Fraud Transactions)', fontsize=14)
 ax3.legend()
 
-plt.savefig("./fraud_detection/plots/negft_distr.png")
+plt.savefig("./plots/negft_distr.png")
 plt.show()
 # %%
 # Anomaly elimination
@@ -365,6 +356,31 @@ sns.boxplot(x="Class", y="V10", data=new_df, ax=ax3)
 ax3.set_title("V10 Feature \n Reduction of outliers", fontsize=14)
 
 
-plt.savefig("./fraud_detection/plots/neg_corr_nools.png")
+plt.savefig("./plots/neg_corr_nools.png")
 plt.show() 
 # %%
+# Dimensionality Reduction and Clustering
+## T-SNE
+
+data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform((new_df.drop('Class', axis=1)))
+# %%
+fig = plt.figure(facecolor="white", constrained_layout=True)
+ax = fig.add_subplot(projection="3d")
+
+
+sc0, sc1, sc2 = data_embedded_TSNE[:,0], data_embedded_TSNE[:,1], data_embedded_TSNE[:,2]
+y = new_df['Class']
+
+ax.scatter(sc0, sc1, sc2, c=(y == 0), cmap="coolwarm", label="Non Fraud")
+ax.scatter(sc0, sc1, sc2, c=(y == 1), cmap="coolwarm", label="Fraud")
+
+ax.legend()
+
+ax.set_title('t-SNE')
+ax.grid(True)
+
+plt.savefig("./plots/tsne.png")
+plt.show() 
+
+# %%
+
