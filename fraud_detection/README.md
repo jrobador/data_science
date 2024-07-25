@@ -507,6 +507,10 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
 
 ![T-SNE](./plots/tsne.png)
 
+### PCA (Principal Component Analysis)
+
+          
+
 ## Clustering
 
 ### Logistic Regression
@@ -521,4 +525,6 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
 
 ## Learning Curves
 
-
+The wider the gap between the training score and the cross validation score, the more likely your model is overfitting (high variance).
+If the score is low in both training and cross-validation sets this is an indication that our model is underfitting (high bias)
+Logistic Regression Classifier shows the best score in both training and cross-validating sets.
