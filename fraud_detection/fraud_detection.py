@@ -359,8 +359,7 @@ ax3.set_title("V10 Feature \n Reduction of outliers", fontsize=14)
 plt.savefig("./plots/neg_corr_nools.png")
 plt.show() 
 # %%
-# Dimensionality Reduction and Clustering
-## T-SNE
+# T-SNE for 3D plot
 
 data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform((new_df.drop('Class', axis=1)))
 # %%
@@ -371,16 +370,69 @@ ax = fig.add_subplot(projection="3d")
 sc0, sc1, sc2 = data_embedded_TSNE[:,0], data_embedded_TSNE[:,1], data_embedded_TSNE[:,2]
 y = new_df['Class']
 
-ax.scatter(sc0, sc1, sc2, c=(y == 0), cmap="coolwarm", label="Non Fraud")
-ax.scatter(sc0, sc1, sc2, c=(y == 1), cmap="coolwarm", label="Fraud")
+ax.scatter(data_embedded_TSNE[(y == 0),0], data_embedded_TSNE[(y == 0),1], data_embedded_TSNE[(y == 0),2], c='yellow', label="Non Fraud")
+ax.scatter(data_embedded_TSNE[(y == 1),0], data_embedded_TSNE[(y == 1),1], data_embedded_TSNE[(y == 1),2], c='blue', label="Fraud")
 
 ax.legend()
 
 ax.set_title('t-SNE')
 ax.grid(True)
 
-plt.savefig("./plots/tsne.png")
+plt.savefig("./plots/tsne_3d.png")
 plt.show() 
 
 # %%
+# T-SNE for 2D plot
 
+data_embedded_TSNE = TSNE(n_components=2, random_state=37).fit_transform((new_df.drop('Class', axis=1)))
+# %%
+fig = plt.figure(facecolor="white", constrained_layout=True)
+ax = fig.add_subplot()
+
+
+y = new_df['Class']
+
+ax.scatter(data_embedded_TSNE[(y == 0),0], data_embedded_TSNE[(y == 0),1], c='yellow',  label="Non Fraud")
+ax.scatter(data_embedded_TSNE[(y == 1),0], data_embedded_TSNE[(y == 1),1], c='blue',    label="Fraud")
+
+ax.legend()
+
+ax.set_title('t-SNE')
+ax.grid(True)
+
+plt.savefig("./plots/tsne_2d.png")
+plt.show() 
+
+
+#%%
+pca_module_90 = PCA(n_components=0.9, random_state=37)
+data_embedded_PCA = pca_module_90.fit_transform((new_df.drop('Class', axis=1)))
+
+# %%
+data_embedded_PCA.shape
+pca_module_90.explained_variance_ratio_
+
+pca_module_90.explained_variance_ratio_.sum()
+
+# %%
+pca_module_2 = PCA(n_components=2, random_state=37)
+data_embedded_PCA = pca_module_2.fit_transform((new_df.drop('Class', axis=1)))
+# %%
+pca_module_2.explained_variance_ratio_.sum()
+
+# %%
+
+fig = plt.figure(facecolor="white", constrained_layout=True)
+ax = fig.add_subplot()
+plt.scatter(data_embedded_PCA[(y == 1),0], data_embedded_PCA[(y == 1),1],c='yellow', label="Fraud")
+plt.scatter(data_embedded_PCA[(y == 0),0], data_embedded_PCA[(y == 0),1],c='blue', label="Non-Fraud")
+
+plt.legend()
+
+ax.grid(True)
+# %%
+print (data_embedded_PCA.shape)
+print (data_embedded_PCA[(y == 1),0].shape)
+# %%
+y.shape
+# %%
