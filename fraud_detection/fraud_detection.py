@@ -428,8 +428,11 @@ plt.scatter(data_embedded_PCA[(y == 1),0], data_embedded_PCA[(y == 1),1],c='yell
 plt.scatter(data_embedded_PCA[(y == 0),0], data_embedded_PCA[(y == 0),1],c='blue', label="Non-Fraud")
 
 plt.legend()
-
 ax.grid(True)
+
+plt.savefig("./plots/pca.png")
+plt.show() 
+
 # %%
 print (data_embedded_PCA.shape)
 print (data_embedded_PCA[(y == 1),0].shape)
