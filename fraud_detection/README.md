@@ -505,11 +505,58 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
 
 > This gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
 
-![T-SNE](./plots/tsne.png)
+![T-SNE](./plots/tsne_3d.png)
+![T-SNE](./plots/tsne_2d.png)
+
 
 ### PCA (Principal Component Analysis)
 
-          
+PCA is used to reduce the dimensionality of a dataset while preserving as much variance as possible. It transforms the data into a new coordinate system where the axes (principal components) are ordered by the amount of variance they capture.
+
+## Steps in PCA
+
+### 1. Standardize the Data
+
+First, standardize the data to have zero mean and unit variance. This step is crucial if the features have different units.
+
+Let $\mathbf{X} $ be the $n \times p $ data matrix where $n $ is the number of observations and $p $ is the number of features. 
+
+Standardize the data:
+
+\[ \mathbf{X}_{\text{std}} = \frac{\mathbf{X} - \mu}{\sigma} \]
+
+where $\mu $ is the mean vector and $\sigma $ is the standard deviation vector of each feature.
+
+### 2. Compute the Covariance Matrix
+
+Calculate the covariance matrix of the standardized data:
+
+\[ \mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}} \]
+
+where $\mathbf{C} $ is a $p \times p $ matrix.
+
+### 3. Compute the Eigenvalues and Eigenvectors
+
+Find the eigenvalues and eigenvectors of the covariance matrix $\mathbf{C} $. This involves solving:
+
+\[ \mathbf{C} \mathbf{v} = \lambda \mathbf{v} \]
+
+where $\mathbf{v} $ is an eigenvector and $\lambda $ is the corresponding eigenvalue.
+
+### 4. Sort the Eigenvalues and Eigenvectors
+
+Sort the eigenvalues in descending order and reorder the eigenvectors accordingly. Let $\mathbf{V} $ be the matrix whose columns are the sorted eigenvectors.
+
+### 5. Transform the Data
+
+Project the original data onto the new feature space defined by the eigenvectors. Choose the top $k $ eigenvectors (principal components) where $k $ is the number of dimensions to reduce to. The transformation is:
+
+\[ \mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k} \]
+
+where $\mathbf{V}_{k} $ is the matrix containing the top $k  eigenvectors.
+
+![PCA](./plots/pca.png)
+
 
 ## Clustering
 
