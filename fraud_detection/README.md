@@ -523,7 +523,7 @@ Let $\mathbf{X} $ be the $n \times p $ data matrix where $n $ is the number of o
 
 Standardize the data:
 
-\[ \mathbf{X}_{\text{std}} = \frac{\mathbf{X} - \mu}{\sigma} \]
+$$ \mathbf{X}_{\text{std}} = \frac{\mathbf{X} - \mu}{\sigma}$$
 
 where $\mu $ is the mean vector and $\sigma $ is the standard deviation vector of each feature.
 
@@ -531,7 +531,7 @@ where $\mu $ is the mean vector and $\sigma $ is the standard deviation vector o
 
 Calculate the covariance matrix of the standardized data:
 
-\[ \mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}} \]
+$$ \mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}}$$
 
 where $\mathbf{C} $ is a $p \times p $ matrix.
 
@@ -539,7 +539,7 @@ where $\mathbf{C} $ is a $p \times p $ matrix.
 
 Find the eigenvalues and eigenvectors of the covariance matrix $\mathbf{C} $. This involves solving:
 
-\[ \mathbf{C} \mathbf{v} = \lambda \mathbf{v} \]
+$$ \mathbf{C} \mathbf{v} = \lambda \mathbf{v}$$
 
 where $\mathbf{v} $ is an eigenvector and $\lambda $ is the corresponding eigenvalue.
 
@@ -551,22 +551,23 @@ Sort the eigenvalues in descending order and reorder the eigenvectors accordingl
 
 Project the original data onto the new feature space defined by the eigenvectors. Choose the top $k $ eigenvectors (principal components) where $k $ is the number of dimensions to reduce to. The transformation is:
 
-\[ \mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k} \]
+$$ \mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k}$$
 
 where $\mathbf{V}_{k} $ is the matrix containing the top $k  eigenvectors.
 
 ![PCA](./plots/pca.png)
 
 
-## Clustering
+## Classification task (is it a fraud case or not?)
+We will train and evaluate various classifiers from scikit-learn to assess their performance. Additionally, we will compare the processing speed of scikit-learn algorithms with their RAPIDS counterparts. While scikit-learn operates on the CPU, RAPIDS leverages NVIDIA GPUs for accelerated computation. This comparison aims to highlight the performance differences between CPU-based and GPU-based processing.
 
-### Logistic Regression
+Particularly in high-dimensional spaces, data can more easily be separated linearly and the simplicity of classifiers such as naive Bayes and linear SVMs might lead to better generalization than is achieved by other classifiers.
 
-### KNeighborsClassifier
-
+### Nearest Neighbors
 ### SVC
-
-### DecisionTreeClassifier
+### Random Forest
+### Logistic Regression
+### GaussianNB
 
 ## GridSearchCV
 
@@ -575,3 +576,5 @@ where $\mathbf{V}_{k} $ is the matrix containing the top $k  eigenvectors.
 The wider the gap between the training score and the cross validation score, the more likely your model is overfitting (high variance).
 If the score is low in both training and cross-validation sets this is an indication that our model is underfitting (high bias)
 Logistic Regression Classifier shows the best score in both training and cross-validating sets.
+
+## Cross validation
