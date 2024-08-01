@@ -5,17 +5,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.decomposition import PCA
+
 from sklearn.preprocessing import RobustScaler
+
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 
-from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
 
@@ -25,6 +27,9 @@ from imblearn.under_sampling import NearMiss
 from imblearn.metrics import classification_report_imbalanced
 
 from scipy.stats import norm
+
+from datetime import datetime
+
 
 
 #%%
@@ -115,58 +120,36 @@ ax[1].set_title('Normal Distribution of Transaction Time', fontsize=14)
 plt.savefig("./plots/normal_distributions.png")
 plt.show()
 # %%
-# Scaling Time and amount (non-scaled yet)
-
-rob_scaler = RobustScaler()
-
-df.insert(0, 'scaled_amount', rob_scaler.fit_transform(df['Amount'].values.reshape(-1,1)))
-df.insert(1, 'scaled_time',   rob_scaler.fit_transform(df['Time'].values.reshape(-1,1)))
+# Scaling Time and amount
+df.insert(0, 'scaled_amount', RobustScaler().fit_transform(df['Amount'].values.reshape(-1,1)))
+df.insert(1, 'scaled_time',   RobustScaler().fit_transform(df['Time'].values.reshape(-1,1)))
 
 df.drop(['Time','Amount'], axis=1, inplace=True)
 
 print (df.columns)
 
-
-# %%color='r',
+# %%
+df.describe()
+# %%
 # Splitting original DataFrame
 
 X = df.drop('Class', axis=1)
 y = df['Class']
 
-sss = StratifiedKFold(n_splits=5, random_state=None, shuffle=False)
 
-for i, (train_index, test_index) in enumerate(sss.split(X, y)):
-    print (i)
-    print("Train:", len(train_index), "Test:", len(test_index))
-    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
-    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=37
+)
 
-# Converts the pandas DataFrame and Series objects to NumPy arrays. 
-original_Xtrain = original_Xtrain.values
-original_Xtest = original_Xtest.values
-original_ytrain = original_ytrain.values
-original_ytest = original_ytest.values
-
-# See if both the train and test label distribution are similarly distributed
-train_unique_label, train_counts_label = np.unique(original_ytrain, return_counts=True)
-test_unique_label, test_counts_label = np.unique(original_ytest, return_counts=True)
-
-# Suppose original_ytrain is [0, 1, 0, 1, 0]:
-# train_unique_label will be [0, 1] (the unique labels).
-# train_counts_label will be [3, 2] (3 instances of label 0 and 2 instances of label 1).
-print('-' * 100)
-
-print('Label Distributions:')
-print("For training labels (Fraud, no Fraud)" + str(train_counts_label/ len(original_ytrain)))
-print("For testing labels (Fraud, no Fraud) " + str(test_counts_label / len(original_ytest )))
-
-print (train_counts_label)
-
+# %%
+X.min()
+#%%
+X.loc[274771]
 #%%
 # Subsampling
 # Approach: Take randomly the same proportion of non-fraud transaction to avoid wrong correlations.
 # Why undersampling? Because our dataset is large enough and we can do it.
-# Just taking the same amount forWith each class.
+# Just taking the same amount for each class.
 
 df = df.sample(frac=1)
 
@@ -184,7 +167,7 @@ print ("Non-Fraud Length:{a}, Fraud Length:{b}".format(b=len(fraud_df), a=len(no
 normal_distributed_df = pd.concat([fraud_df, non_fraud_df])
 
 # Shuffle dataframe rows
-new_df = normal_distributed_df.sample(frac=1, random_state=42)
+new_df = normal_distributed_df.sample(frac=1, random_state=37)
 
 # %%
 plt.figure(figsize=(24,20))
@@ -434,8 +417,86 @@ plt.savefig("./plots/pca.png")
 plt.show() 
 
 # %%
-print (data_embedded_PCA.shape)
-print (data_embedded_PCA[(y == 1),0].shape)
-# %%
-y.shape
-# %%
+### Evaluate the classifier. CPU Approach
+
+names = [
+    "Nearest Neighbors", "SVC",
+    "Random Forest", "Logistic Regression",
+    "GaussianNB"
+]
+classifiers = [
+    KNeighborsClassifier(3),
+    SVC(kernel="linear", C=0.025, random_state=37),
+    RandomForestClassifier(
+        max_depth=5, n_estimators=10, max_features=1, random_state=37
+    ),
+    LogisticRegression(),
+    GaussianNB()
+]
+def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
+    start_time = datetime.now()
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average='weighted')
+    recall = recall_score(y_test, y_pred, average='weighted')
+    f1 = f1_score(y_test, y_pred, average='weighted')
+
+    end_time = datetime.now()
+    duration = end_time - start_time
+    return accuracy, precision, recall, f1, duration
+
+# Evaluate each classifier
+results = []
+for name, clf in zip(names, classifiers):
+    print(f"Running for {name}")
+    accuracy, precision, recall, f1, duration = evaluate_classifier(clf, X_train, y_train, X_test, y_test)
+    results.append((name, accuracy, precision, recall, f1, duration))
+
+# Print and save results
+with open('sk_clasf_metrics.txt', 'w') as f:
+    f.write("Metrics for Sci-Kit Learn Classifiers\n")
+    f.write("=" * 40 + "\n\n")
+    for name, accuracy, precision, recall, f1, duration in results:
+        output_str = (f"{name}:\n"
+                      f"  Accuracy:  {accuracy:.4f}\n"
+                      f"  Precision: {precision:.4f}\n"
+                      f"  Recall:    {recall:.4f}\n"
+                      f"  F1 Score:  {f1:.4f}\n"
+                      f"  Duration:  {duration}\n"
+                      f"{'-' * 30}\n")
+        print(output_str)
+        f.write(output_str)
+
+
+#%%
+## Cross-Validation section
+
+sss = StratifiedKFold(n_splits=5, random_state=None, shuffle=False)
+
+for i, (train_index, test_index) in enumerate(sss.split(X, y)):
+    print (i)
+    print("Train:", len(train_index), "Test:", len(test_index))
+    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
+    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
+
+# Converts the pandas DataFrame and Series objects to NumPy arrays. 
+original_Xtrain = original_Xtrain.values
+original_Xtest = original_Xtest.values
+original_ytrain = original_ytrain.values
+original_ytest = original_ytest.values
+
+# See if both the train and test label distribution are similarly distributed
+train_unique_label, train_counts_label = np.unique(original_ytrain, return_counts=True)
+test_unique_label, test_counts_label = np.unique(original_ytest, return_counts=True)
+
+# Suppose original_ytrain is [0, 1, 0, 1, 0]:
+# train_unique_label will be [0, 1] (the unique labels).
+# train_counts_label will be [3, 2] (3 instances of label 0 and 2 instances of label 1).
+print('-' * 100)
+
+print('Label Distributions:')
+print("For training labels (Fraud, no Fraud)" + str(train_counts_label/ len(original_ytrain)))
+print("For testing labels (Fraud, no Fraud) " + str(test_counts_label / len(original_ytest )))
+
+print (train_counts_label)
