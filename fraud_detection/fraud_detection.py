@@ -433,6 +433,9 @@ classifiers = [
     LogisticRegression(),
     GaussianNB()
 ]
+
+#%%
+
 def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
     start_time = datetime.now()
     clf.fit(X_train, y_train)
@@ -499,4 +502,19 @@ print('Label Distributions:')
 print("For training labels (Fraud, no Fraud)" + str(train_counts_label/ len(original_ytrain)))
 print("For testing labels (Fraud, no Fraud) " + str(test_counts_label / len(original_ytest )))
 
-print (train_counts_label)
+
+# %%
+results_cv = [[] for _ in range(len(classifiers))]
+for i, (train_index, test_index) in enumerate(sss.split(X, y)):
+    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
+    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
+
+    for j, (name, clf_cv) in enumerate(zip(names, classifiers)):
+        clf_cv.fit(original_Xtrain, original_ytrain)
+        y_pred_cv = clf_cv.predict(original_Xtest)
+        accuracy = accuracy_score(original_ytest, y_pred_cv)
+        precision = precision_score(original_ytest, y_pred_cv, average='weighted')
+        recall = recall_score(original_ytest, y_pred_cv, average='weighted')
+        f1 = f1_score(original_ytest, y_pred_cv, average='weighted')
+        results_cv[j].append([accuracy, precision, recall, f1])
+ 
