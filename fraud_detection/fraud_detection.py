@@ -8,6 +8,7 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 
 from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import StandardScaler
 
 from sklearn.model_selection import StratifiedShuffleSplit
 
@@ -17,11 +18,11 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
 
-from imblearn.pipeline import make_pipeline as imbalanced_make_pipeline
+from imblearn.pipeline import make_pipeline
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import NearMiss
 from imblearn.metrics import classification_report_imbalanced
@@ -29,9 +30,6 @@ from imblearn.metrics import classification_report_imbalanced
 from scipy.stats import norm
 
 from datetime import datetime
-
-
-
 #%%
 # Have first sense of dataset
 
@@ -417,25 +415,24 @@ plt.savefig("./plots/pca.png")
 plt.show() 
 
 # %%
-### Evaluate the classifier. CPU Approach
+### Defining classifiers
 
 names = [
-    #"Nearest Neighbors", "SVC",
+    "Nearest Neighbors", "SVC",
     "Random Forest", "Logistic Regression",
     "GaussianNB"
 ]
 classifiers = [
-    #KNeighborsClassifier(3),
-    #SVC(kernel="linear", C=0.025, random_state=37),
-    RandomForestClassifier(
-        max_depth=5, n_estimators=10, max_features=1, random_state=37
-    ),
-    LogisticRegression(),
-    GaussianNB()
+    KNeighborsClassifier(3),
+    # SVC(kernel="linear", C=0.025, random_state=37),
+    # RandomForestClassifier(
+    #     max_depth=5, n_estimators=10, max_features=1, random_state=37
+    # ),
+    # LogisticRegression(),
+    # GaussianNB()
 ]
-
 #%%
-
+# Evaluate the classifier. CPU Approach
 def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
     start_time = datetime.now()
     clf.fit(X_train, y_train)
@@ -449,6 +446,7 @@ def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
     duration = end_time - start_time
     return accuracy, precision, recall, f1, duration
 
+#%%
 # Evaluate each classifier
 results = []
 for name, clf in zip(names, classifiers):
@@ -470,12 +468,13 @@ with open('sk_clasf_metrics.txt', 'w') as f:
                       f"{'-' * 30}\n")
         print(output_str)
         f.write(output_str)
+#%%
+# KFold implementation
 
+sss = StratifiedKFold(n_splits=5, random_state=37, shuffle=True)
 
 #%%
-## Cross-Validation inspection
-
-sss = StratifiedKFold(n_splits=5, random_state=None, shuffle=False)
+# Cross-Validation inspection
 
 for i, (train_index, test_index) in enumerate(sss.split(X, y)):
     print (i)
@@ -511,12 +510,9 @@ for i, (train_index, test_index) in enumerate(sss.split(X, y)):
     original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
 
     for j, clf_cv in enumerate(classifiers):
-        clf_cv.fit(original_Xtrain, original_ytrain)
-        y_pred_cv = clf_cv.predict(original_Xtest)
-        accuracy = accuracy_score(original_ytest, y_pred_cv)
-        precision = precision_score(original_ytest, y_pred_cv, average='weighted')
-        recall = recall_score(original_ytest, y_pred_cv, average='weighted')
-        f1 = f1_score(original_ytest, y_pred_cv, average='weighted')
+        print (f"Classifier name {clf_cv.__class__.__name__}  CV number {i}")
+        accuracy, precision, recall, f1, duration = evaluate_classifier(clf_cv, original_Xtrain, original_ytrain,
+                                                              original_Xtest, original_ytest)
         results_cv[j].append([accuracy, precision, recall, f1]) 
 
 # %%
@@ -525,21 +521,41 @@ results_cv_np = np.array(results_cv)
 ## (Classifier, CV folds, Metrics)
 results_cv_np.shape
 # %%
+results_cv_np[0,:]
+# %%
 # Take the mean for folds.
 cv_metrics = np.mean(results_cv_np, axis=1, keepdims=True)
+
+# %%
+cv_metrics.shape
 #%% 
 with open('sk_clasf_CV_metrics.txt', 'w') as f:
     f.write("Metrics for Statisfied K-Fold CV - Sci-Kit Learn Classifiers\n")
     f.write("=" * 40 + "\n\n")
     for i, name in enumerate (names):
-        accuracy, precision, recall, f1 = cv_metrics[i,0]
+        accuracy, precision, recall, f1, duration = cv_metrics[i,0]
         output_str = (f"{name}:\n"
-              f"  Accuracy:  {accuracy:.4f}\n"
-              f"  Precision: {precision:.4f}\n"
-              f"  Recall:    {recall:.4f}\n"
-              f"  F1 Score:  {f1:.4f}\n"
-              f"{'-' * 30}\n")
+                      f"  Accuracy:  {accuracy:.4f}\n"
+                      f"  Precision: {precision:.4f}\n"
+                      f"  Recall:    {recall:.4f}\n"
+                      f"  F1 Score:  {f1:.4f}\n"
+                      f"  Duration:  {duration}\n"
+                      f"{'-' * 30}\n")
         f.write(output_str)
 
 # %%
-# Cross-Validation classifiers - in-built functions
+# Cross-Validation classifiers - built-in metric functions
+
+cross_val_score(KNeighborsClassifier(3), X, y, cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring="accuracy")
+
+# %% 
+# Learning curves
+
+# %%
+# GridSearchCV
+
+# %%
+# from imblearn.pipeline import make_pipeline
+# from imblearn.over_sampling import SMOTE
+# from imblearn.under_sampling import NearMiss
+# from imblearn.metrics import classification_report_imbalanced
