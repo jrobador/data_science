@@ -420,13 +420,13 @@ plt.show()
 ### Evaluate the classifier. CPU Approach
 
 names = [
-    "Nearest Neighbors", "SVC",
+    #"Nearest Neighbors", "SVC",
     "Random Forest", "Logistic Regression",
     "GaussianNB"
 ]
 classifiers = [
-    KNeighborsClassifier(3),
-    SVC(kernel="linear", C=0.025, random_state=37),
+    #KNeighborsClassifier(3),
+    #SVC(kernel="linear", C=0.025, random_state=37),
     RandomForestClassifier(
         max_depth=5, n_estimators=10, max_features=1, random_state=37
     ),
@@ -473,7 +473,7 @@ with open('sk_clasf_metrics.txt', 'w') as f:
 
 
 #%%
-## Cross-Validation section
+## Cross-Validation inspection
 
 sss = StratifiedKFold(n_splits=5, random_state=None, shuffle=False)
 
@@ -504,17 +504,42 @@ print("For testing labels (Fraud, no Fraud) " + str(test_counts_label / len(orig
 
 
 # %%
+# Cross-Validation classifiers - from scratch code
 results_cv = [[] for _ in range(len(classifiers))]
 for i, (train_index, test_index) in enumerate(sss.split(X, y)):
     original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
     original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
 
-    for j, (name, clf_cv) in enumerate(zip(names, classifiers)):
+    for j, clf_cv in enumerate(classifiers):
         clf_cv.fit(original_Xtrain, original_ytrain)
         y_pred_cv = clf_cv.predict(original_Xtest)
         accuracy = accuracy_score(original_ytest, y_pred_cv)
         precision = precision_score(original_ytest, y_pred_cv, average='weighted')
         recall = recall_score(original_ytest, y_pred_cv, average='weighted')
         f1 = f1_score(original_ytest, y_pred_cv, average='weighted')
-        results_cv[j].append([accuracy, precision, recall, f1])
- 
+        results_cv[j].append([accuracy, precision, recall, f1]) 
+
+# %%
+results_cv_np = np.array(results_cv)
+# %%
+## (Classifier, CV folds, Metrics)
+results_cv_np.shape
+# %%
+# First classifier
+fs_clf = results_cv_np[0,:,:]
+# %%
+fs_clf.shape
+# %%
+# Take the mean for folds.
+cv_metrics = np.mean(results_cv_np, axis=1, keepdims=True)
+# %%
+cv_metrics[0].shape
+# %%
+cv_metrics[0,0]
+
+#%% 
+for i, name in enumerate (names):
+    accuracy, precision, recall, f1 = cv_metrics[i,:]
+    print (accuracy)
+# %%
+# Cross-Validation classifiers - in-built functions
