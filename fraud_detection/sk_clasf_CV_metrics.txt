@@ -1,0 +1,21 @@
+Metrics for Statisfied K-Fold CV - Sci-Kit Learn Classifiers
+========================================
+
+Random Forest:
+  Accuracy:  0.9807
+  Precision: 0.9987
+  Recall:    0.9807
+  F1 Score:  0.9890
+------------------------------
+Logistic Regression:
+  Accuracy:  0.9991
+  Precision: 0.9991
+  Recall:    0.9991
+  F1 Score:  0.9990
+------------------------------
+GaussianNB:
+  Accuracy:  0.9778
+  Precision: 0.9981
+  Recall:    0.9778
+  F1 Score:  0.9872
+------------------------------

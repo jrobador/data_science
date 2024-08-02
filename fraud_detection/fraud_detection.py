@@ -525,21 +525,21 @@ results_cv_np = np.array(results_cv)
 ## (Classifier, CV folds, Metrics)
 results_cv_np.shape
 # %%
-# First classifier
-fs_clf = results_cv_np[0,:,:]
-# %%
-fs_clf.shape
-# %%
 # Take the mean for folds.
 cv_metrics = np.mean(results_cv_np, axis=1, keepdims=True)
-# %%
-cv_metrics[0].shape
-# %%
-cv_metrics[0,0]
-
 #%% 
-for i, name in enumerate (names):
-    accuracy, precision, recall, f1 = cv_metrics[i,:]
-    print (accuracy)
+with open('sk_clasf_CV_metrics.txt', 'w') as f:
+    f.write("Metrics for Statisfied K-Fold CV - Sci-Kit Learn Classifiers\n")
+    f.write("=" * 40 + "\n\n")
+    for i, name in enumerate (names):
+        accuracy, precision, recall, f1 = cv_metrics[i,0]
+        output_str = (f"{name}:\n"
+              f"  Accuracy:  {accuracy:.4f}\n"
+              f"  Precision: {precision:.4f}\n"
+              f"  Recall:    {recall:.4f}\n"
+              f"  F1 Score:  {f1:.4f}\n"
+              f"{'-' * 30}\n")
+        f.write(output_str)
+
 # %%
 # Cross-Validation classifiers - in-built functions
