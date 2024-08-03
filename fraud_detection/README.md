@@ -563,6 +563,8 @@ We will train and evaluate various classifiers from scikit-learn to assess their
 
 Particularly in high-dimensional spaces, data can more easily be separated linearly and the simplicity of classifiers such as naive Bayes and linear SVMs might lead to better generalization than is achieved by other classifiers.
 
+One thing very important to note is that I am using average='weighted'. If you calculate the macro average for metrics like precision, recall, or F1 Score, it means you’re looking at the average performance for each class separately and then averaging them together. It’s like saying, “Let’s see how well our model performed for each category, and then find the average performance across all categories.” Weighted average is like giving more importance to some opinions in a group discussion based on their expertise.
+
 ### Nearest Neighbors
 ### SVC
 ### Random Forest

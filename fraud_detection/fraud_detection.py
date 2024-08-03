@@ -424,12 +424,12 @@ names = [
 ]
 classifiers = [
     KNeighborsClassifier(3),
-    # SVC(kernel="linear", C=0.025, random_state=37),
-    # RandomForestClassifier(
-    #     max_depth=5, n_estimators=10, max_features=1, random_state=37
-    # ),
-    # LogisticRegression(),
-    # GaussianNB()
+    SVC(kernel="linear", C=0.025, random_state=37),
+    RandomForestClassifier(
+        max_depth=5, n_estimators=10, max_features=1, random_state=37
+    ),
+    LogisticRegression(),
+    GaussianNB()
 ]
 #%%
 # Evaluate the classifier. CPU Approach
@@ -510,7 +510,7 @@ for i, (train_index, test_index) in enumerate(sss.split(X, y)):
     original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
 
     for j, clf_cv in enumerate(classifiers):
-        print (f"Classifier name {clf_cv.__class__.__name__}  CV number {i}")
+        print (f"Classifier name {clf_cv.__class__.__name__}  CV number {i} J variable {j}")
         accuracy, precision, recall, f1, duration = evaluate_classifier(clf_cv, original_Xtrain, original_ytrain,
                                                               original_Xtest, original_ytest)
         results_cv[j].append([accuracy, precision, recall, f1]) 
@@ -545,9 +545,15 @@ with open('sk_clasf_CV_metrics.txt', 'w') as f:
 
 # %%
 # Cross-Validation classifiers - built-in metric functions
+met_cv_list = []
+for scoring in ("accuracy", "precision", "recall", "f1"):
+    print (scoring)
+    met_cv_list.append(cross_val_score(KNeighborsClassifier(3), X, y, cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring))
 
-cross_val_score(KNeighborsClassifier(3), X, y, cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring="accuracy")
+met_cv_list =  np.array(met_cv_list).T
 
+# %%
+met_cv_list
 # %% 
 # Learning curves
 
