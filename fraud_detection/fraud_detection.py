@@ -20,7 +20,7 @@ from sklearn.svm import SVC
 
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 
-from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
 
 from imblearn.pipeline import make_pipeline
 from imblearn.over_sampling import SMOTE
@@ -474,6 +474,10 @@ with open('sk_clasf_metrics.txt', 'w') as f:
 sss = StratifiedKFold(n_splits=5, random_state=37, shuffle=True)
 
 #%%
+X = df.drop('Class', axis=1)
+y = df['Class']
+
+#%%
 # Cross-Validation inspection
 
 for i, (train_index, test_index) in enumerate(sss.split(X, y)):
@@ -513,7 +517,7 @@ for i, (train_index, test_index) in enumerate(sss.split(X, y)):
         print (f"Classifier name {clf_cv.__class__.__name__}  CV number {i} J variable {j}")
         accuracy, precision, recall, f1, duration = evaluate_classifier(clf_cv, original_Xtrain, original_ytrain,
                                                               original_Xtest, original_ytest)
-        results_cv[j].append([accuracy, precision, recall, f1]) 
+        results_cv[j].append([accuracy, precision, recall, f1, duration]) 
 
 # %%
 results_cv_np = np.array(results_cv)
@@ -545,15 +549,27 @@ with open('sk_clasf_CV_metrics.txt', 'w') as f:
 
 # %%
 # Cross-Validation classifiers - built-in metric functions
+precision_scorer = make_scorer(precision_score, average='weighted')
+recall_scorer = make_scorer(recall_score, average='weighted')
+f1_scorer = make_scorer(f1_score, average='weighted')
+scoring_methods = {
+    "accuracy": 'accuracy',
+    "precision": precision_scorer,
+    "recall": recall_scorer,
+    "f1": f1_scorer
+}
+
 met_cv_list = []
-for scoring in ("accuracy", "precision", "recall", "f1"):
-    print (scoring)
-    met_cv_list.append(cross_val_score(KNeighborsClassifier(3), X, y, cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring))
 
-met_cv_list =  np.array(met_cv_list).T
+for scoring_name, scoring in scoring_methods.items():
+    print(scoring_name)
+    scores = cross_val_score(KNeighborsClassifier(3), X, y,
+                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring)
+    met_cv_list.append(scores)
 
-# %%
-met_cv_list
+met_cv_list = np.array(met_cv_list).T
+print(met_cv_list)
+
 # %% 
 # Learning curves
 

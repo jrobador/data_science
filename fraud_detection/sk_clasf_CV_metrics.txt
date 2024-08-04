@@ -2,37 +2,37 @@ Metrics for Statisfied K-Fold CV - Sci-Kit Learn Classifiers
 ========================================
 
 Nearest Neighbors:
-  Accuracy:  0.9992
-  Precision: 0.9992
-  Recall:    0.9992
-  F1 Score:  0.9992
-  Duration:  0:00:11.694836
+  Accuracy:  0.9995
+  Precision: 0.9995
+  Recall:    0.9995
+  F1 Score:  0.9995
+  Duration:  0:00:11.574534
 ------------------------------
 SVC:
   Accuracy:  0.9994
-  Precision: 0.9994
+  Precision: 0.9993
   Recall:    0.9994
-  F1 Score:  0.9993
-  Duration:  0:00:16.461953
+  F1 Score:  0.9994
+  Duration:  0:09:54.679597
 ------------------------------
 Random Forest:
-  Accuracy:  0.9807
-  Precision: 0.9987
-  Recall:    0.9807
-  F1 Score:  0.9890
-  Duration:  0:00:01.827190
+  Accuracy:  0.9989
+  Precision: 0.9989
+  Recall:    0.9989
+  F1 Score:  0.9987
+  Duration:  0:00:01.328658
 ------------------------------
 Logistic Regression:
-  Accuracy:  0.9991
+  Accuracy:  0.9992
   Precision: 0.9991
-  Recall:    0.9991
-  F1 Score:  0.9990
-  Duration:  0:00:00.610168
+  Recall:    0.9992
+  F1 Score:  0.9991
+  Duration:  0:00:00.617791
 ------------------------------
 GaussianNB:
-  Accuracy:  0.9778
+  Accuracy:  0.9779
   Precision: 0.9981
-  Recall:    0.9778
-  F1 Score:  0.9872
-  Duration:  0:00:00.156934
+  Recall:    0.9779
+  F1 Score:  0.9873
+  Duration:  0:00:00.132904
 ------------------------------
