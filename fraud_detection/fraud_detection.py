@@ -4,13 +4,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from scipy.stats import norm
+
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 
 from sklearn.preprocessing import RobustScaler
-from sklearn.preprocessing import StandardScaler
-
-from sklearn.model_selection import StratifiedShuffleSplit
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -18,18 +17,16 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, LearningCurveDisplay
 
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, accuracy_score
+from datetime import datetime
 
 from imblearn.pipeline import make_pipeline
 from imblearn.over_sampling import SMOTE
-from imblearn.under_sampling import NearMiss
 from imblearn.metrics import classification_report_imbalanced
 
-from scipy.stats import norm
 
-from datetime import datetime
 #%%
 # Have first sense of dataset
 
@@ -224,9 +221,6 @@ plt.show()
 
 # %%
 # Normal Distributions plots
-
-from scipy.stats import norm
-
 f, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(30, 8))
 
 # V14 Distribution (Fraud Transactions)
@@ -431,6 +425,11 @@ classifiers = [
     LogisticRegression(),
     GaussianNB()
 ]
+clf_test = [
+    KNeighborsClassifier(3),
+    LogisticRegression(),
+    GaussianNB()
+]
 #%%
 # Evaluate the classifier. CPU Approach
 def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
@@ -538,7 +537,7 @@ with open('sk_clasf_CV_metrics.txt', 'w') as f:
     f.write("=" * 40 + "\n\n")
     for i, name in enumerate (names):
         accuracy, precision, recall, f1, duration = cv_metrics[i,0]
-        output_str = (f"{name}:\n"
+        output_str = (f"{name}:\n"          # Innecesario hacerlo asi...
                       f"  Accuracy:  {accuracy:.4f}\n"
                       f"  Precision: {precision:.4f}\n"
                       f"  Recall:    {recall:.4f}\n"
@@ -559,25 +558,44 @@ scoring_methods = {
     "f1": f1_scorer
 }
 
-met_cv_list = []
+# %%
+# Implementation
+results_cv_sk = [[] for _ in range(len(classifiers))]
 
-for scoring_name, scoring in scoring_methods.items():
-    print(scoring_name)
-    scores = cross_val_score(KNeighborsClassifier(3), X, y,
-                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring)
-    met_cv_list.append(scores)
+for clf in classifiers:
+    print (clf.__class__.__name__)
+    for scoring_name, scoring in scoring_methods.items():
+        print(scoring_name)
+        scores = cross_val_score(clf, X, y,
+                                 cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring)
+        results_cv_sk.append(scores)
 
-met_cv_list = np.array(met_cv_list).T
-print(met_cv_list)
+results_cv_sk = np.array(results_cv_sk).T
+print(results_cv_sk)
 
 # %% 
 # Learning curves
+fig, ax = plt.subplots(nrows=1, ncols=len(clf_test), sharey=True, figsize=(30,10))
+
+for i, clf in enumerate(clf_test):
+    LearningCurveDisplay.from_estimator(clf, X, y, 
+                                        cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), 
+                                        scoring=scoring_methods["accuracy"], ax=ax[i], n_jobs=1)
+    ax[i].set_title(f"{clf.__class__.__name__}")
+
+fig.text(0.04, 0.5, 'Score', va='center', rotation='vertical')
+fig.suptitle('Learning Curves for Different Classifiers', fontsize=16)
+fig.tight_layout(rect=[0.05, 0.05, 1, 0.95])  # Adjust rect to make room for suptitle
+plt.savefig("./plots/lc.png")
+plt.show()
 
 # %%
-# GridSearchCV
+# Over-sampling technique
+for clf in clf_test:
+   pipeline = make_pipeline(SMOTE(sampling_strategy='auto', random_state=37, k_neighbors=5, n_jobs=-1), clf)
+   pipeline.fit(X, y)
+
+print(classification_report_imbalanced(y_test, pipeline.predict(X_test)))
 
 # %%
-# from imblearn.pipeline import make_pipeline
-# from imblearn.over_sampling import SMOTE
-# from imblearn.under_sampling import NearMiss
-# from imblearn.metrics import classification_report_imbalanced
+    
