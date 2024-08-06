@@ -469,26 +469,23 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
 
 1. Compute Pairwise Affinities in High-Dimensional Space:
 
-   - For each pair of data points $ i $ and $ j $ in the high-dimensional space, compute the conditional probability $ p_{j|i} $ that point $ j $ would pick point $ i $ as its neighbor given a Gaussian distribution centered at $ i $. The similarity $ p_{ij} $ is then symmetrized:
-     $$
-     p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}
-     $$
+   - For each pair of data points $i$ and $j$ in the high-dimensional space, compute the conditional probability $p_{j|i}$ that point $j$ would pick point $i$ as its neighbor given a Gaussian distribution centered at $i$. The similarity $p_{ij}$ is then symmetrized:
+
+     $$ p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n} $$
      
    - The perplexity parameter controls the effective number of neighbors considered for each point.
 
 2. Define Pairwise Affinities in Low-Dimensional Space:
    - In the low-dimensional space, the similarity between points $i$ and $j$ is modeled using a Student's t-distribution with one degree of freedom (which has heavier tails than a Gaussian):
-     $$
-     q_{ij} = \frac{(1 + \|y_i - y_j\|^2)^{-1}}{\sum_{k \neq l} (1 + \|y_k - y_l\|^2)^{-1}}
-     $$
 
-   - Here, $ y_i $ and $ y_j $ are the low-dimensional counterparts of the high-dimensional points $ x_i $ and $ x_j $.
+     $$ q_{ij} = \frac{(1 + \|y_i - y_j\|^2)^{-1}}{\sum_{k \neq l} (1 + \|y_k - y_l\|^2)^{-1}} $$
+
+   - Here, $y_i$ and $y_j$ are the low-dimensional counterparts of the high-dimensional points $x_i $ and $x_j$.
 
 3. Minimize the Kullback-Leibler Divergence:
-   - The positions in the low-dimensional space are found by minimizing the Kullback-Leibler (KL) divergence between the joint probabilities $ P $ and $ Q $:
-     $$
-     KL(P \| Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}}
-     $$
+   - The positions in the low-dimensional space are found by minimizing the Kullback-Leibler (KL) divergence between the joint probabilities $P$ and $Q$:
+
+     $$ KL(P \| Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}} $$
 
    - This minimization is typically performed using gradient descent, iteratively adjusting the positions of points in the low-dimensional space to better match the high-dimensional similarities.
 
@@ -510,11 +507,11 @@ PCA is used to reduce the dimensionality of a dataset while preserving as much v
 
 First, standardize the data to have zero mean and unit variance. This step is crucial if the features have different units.
 
-Let $\mathbf{X} $ be the $n \times p $ data matrix where $n $ is the number of observations and $p $ is the number of features. 
+Let $\mathbf{X}$ be the $n \times p$ data matrix where $n$ is the number of observations and $p$ is the number of features. 
 
 Standardize the data:
 
-$$ \mathbf{X}_{\text{std}} = \frac{\mathbf{X} - \mu}{\sigma}$$
+$$ \mathbf{X}_{\text{std}} = \frac{\mathbf{X} - \mu}{\sigma} $$
 
 where $\mu $ is the mean vector and $\sigma $ is the standard deviation vector of each feature.
 
@@ -522,29 +519,29 @@ where $\mu $ is the mean vector and $\sigma $ is the standard deviation vector o
 
 Calculate the covariance matrix of the standardized data:
 
-$$ \mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}}$$
+$$ \mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}} $$
 
-where $\mathbf{C} $ is a $p \times p $ matrix.
+where $\mathbf{C}$ is a $p \times p$ matrix.
 
 ### 3. Compute the Eigenvalues and Eigenvectors
 
-Find the eigenvalues and eigenvectors of the covariance matrix $\mathbf{C} $. This involves solving:
+Find the eigenvalues and eigenvectors of the covariance matrix $\mathbf{C}$. This involves solving:
 
-$$ \mathbf{C} \mathbf{v} = \lambda \mathbf{v}$$
+$$ \mathbf{C} \mathbf{v} = \lambda \mathbf{v} $$
 
-where $\mathbf{v} $ is an eigenvector and $\lambda $ is the corresponding eigenvalue.
+where $\mathbf{v}$ is an eigenvector and $\lambda$ is the corresponding eigenvalue.
 
 ### 4. Sort the Eigenvalues and Eigenvectors
 
-Sort the eigenvalues in descending order and reorder the eigenvectors accordingly. Let $\mathbf{V} $ be the matrix whose columns are the sorted eigenvectors.
+Sort the eigenvalues in descending order and reorder the eigenvectors accordingly. Let $\mathbf{V}$ be the matrix whose columns are the sorted eigenvectors.
 
 ### 5. Transform the Data
 
-Project the original data onto the new feature space defined by the eigenvectors. Choose the top $k $ eigenvectors (principal components) where $k $ is the number of dimensions to reduce to. The transformation is:
+Project the original data onto the new feature space defined by the eigenvectors. Choose the top $k$ eigenvectors (principal components) where $k$ is the number of dimensions to reduce to. The transformation is:
 
-$$ \mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k}$$
+$$ \mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k} $$
 
-where $\mathbf{V}_{k} $ is the matrix containing the top $k  eigenvectors.
+where $\mathbf{V}_{k}$ is the matrix containing the top $k  eigenvectors.
 
 ![PCA](./plots/pca.png)
 
