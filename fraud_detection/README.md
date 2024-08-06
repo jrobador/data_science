@@ -471,7 +471,7 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
 
    - For each pair of data points $i$ and $j$ in the high-dimensional space, compute the conditional probability $p_{j|i}$ that point $j$ would pick point $i$ as its neighbor given a Gaussian distribution centered at $i$. The similarity $p_{ij}$ is then symmetrized:
 
-     $$ p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n} $$
+     $$p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}$$
      
    - The perplexity parameter controls the effective number of neighbors considered for each point.
 
