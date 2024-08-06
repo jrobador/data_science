@@ -227,10 +227,10 @@ $$ f(x|\mu, \sigma) = \frac{1}{\sigma \sqrt{2\pi}} e^{ -\frac{1}{2} \left( \frac
 
 where:
 
-- $ \mu $ is the **mean**.
-- $ \sigma $ is the **standard deviation**.
-- $ \sigma^2 $ is the **variance**.
-- $ x $ is the **variable**.
+- $\mu$ is the **mean**.
+- $\sigma$ is the **standard deviation**.
+- $\sigma^2$ is the **variance**.
+- $x$ is the **variable**.
 
 Examples of Normal Distribution:
 
@@ -280,8 +280,11 @@ What are these coefficients and what is the meaning?
  The Pearson correlation coefficient measures the linear relationship between two continuous variables:
 
 **Definition**: The Pearson correlation coefficient measures the linear relationship between two continuous variables.
+
 **Formula**:
+
 $$ \rho(X, Y) = \frac{\text{cov}(X, Y)}{\sigma_X \sigma_Y} $$
+
 where:
 
 - $\text{cov}(X, Y)$ is the covariance of variables $X$ and $Y$
@@ -309,7 +312,8 @@ where:
 
 **Formula**:
 
-$$ \tau = \frac{(C - D)}{\sqrt{(C + D + T_X)(C + D + T_Y)}}$$
+$$ \tau = \frac{(C - D)}{\sqrt{(C + D + T_X)(C + D + T_Y)}} $$
+
 where:
 
 - $C$ is the number of concordant pairs
@@ -340,6 +344,7 @@ where:
 **Formula**:
 
 $$ \rho = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)} $$
+
 where:
 
 - $d_i$ is the difference between the ranks of each pair of observations
@@ -472,7 +477,7 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
    - The perplexity parameter controls the effective number of neighbors considered for each point.
 
 2. Define Pairwise Affinities in Low-Dimensional Space:
-   - In the low-dimensional space, the similarity between points $ i $ and $ j $ is modeled using a Student's t-distribution with one degree of freedom (which has heavier tails than a Gaussian):
+   - In the low-dimensional space, the similarity between points $i$ and $j$ is modeled using a Student's t-distribution with one degree of freedom (which has heavier tails than a Gaussian):
      $$
      q_{ij} = \frac{(1 + \|y_i - y_j\|^2)^{-1}}{\sum_{k \neq l} (1 + \|y_k - y_l\|^2)^{-1}}
      $$
