@@ -10,20 +10,6 @@ Create predictive models to accurately detect whether a transaction is normal or
 
 ### Dataset example
 
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -571,7 +557,9 @@ One crucial aspect to highlight is the use of the `average='weighted'` parameter
 ### Logistic Regression
 ### GaussianNB
 
-## GridSearchCV
+## Cross validation
+
+
 
 ## Learning Curves
 
@@ -579,4 +567,14 @@ The wider the gap between the training score and the cross validation score, the
 If the score is low in both training and cross-validation sets this is an indication that our model is underfitting (high bias)
 Logistic Regression Classifier shows the best score in both training and cross-validating sets.
 
-## Cross validation
+![LC](./plots/lc.png)
+
+
+## Over-sampling technique
+
+
+## Conclusion
+
+[Tenemos dos partes del codigo. Explicarlo bien en las conclusiones]
+[Explicar los resultados bien. Ver si el flujo toma el test aparte]
+[Comparar resultados con RAPIDS. CV Metrics y con Train-Test Split]
