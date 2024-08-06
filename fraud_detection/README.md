@@ -6,7 +6,7 @@ Create predictive models to accurately detect whether a transaction is normal or
 
 ### Challenges and its solutions
 
-1. Imbalanced datasets are those where there is a severe skew in the class distribution, such as 1:100 or 1:1000 examples in the minority class to the majority class. This bias in the training dataset can influence many machine learning algorithms, leading some to ignore the minority class entirely. This is a problem as it is typically the minority class on which predictions are most important. One approach to addressing the problem of class imbalance is to randomly resample the training dataset. The two main approaches to randomly resampling an imbalanced dataset are to delete examples from the majority class, called **undersampling**, and to duplicate examples from the minority class, called **oversampling**. Both techniques can be used for two-class (binary) classification problems and multi-class classification problems with one or more majority or minority classes. Importantly, the change to the class distribution is only applied to the training dataset. The intent is to influence the fit of the models. The resampling is not applied to the test or holdout dataset used to evaluate the performance of a model. (See more in the repository of MIT+SCIKITLEARN:fundamentals).
+1. Imbalanced datasets are those where there is a severe skew in the class distribution, such as 1:100 or 1:1000 examples in the minority class to the majority class. This bias in the training dataset can influence many machine learning algorithms, leading some to ignore the minority class entirely. This is a problem as it is typically the minority class on which predictions are most important. One approach to addressing the problem of class imbalance is to randomly resample the training dataset. The two main approaches to randomly resampling an imbalanced dataset are to delete examples from the majority class, called **undersampling**, and to duplicate examples from the minority class, called **oversampling**. Both techniques can be used for two-class (binary) classification problems and multi-class classification problems with one or more majority or minority classes. Importantly, the change to the class distribution is only applied to the training dataset. The intent is to influence the fit of the models. The resampling is not applied to the test or holdout dataset used to evaluate the performance of a model. (See more in ![Fundamentals](https://github.com/jrobador/data_science/tree/main/MIT%2BSCIKITLEARN-fundamentals/imbalanced_datasets)).
 
 ### Dataset example
 
@@ -565,12 +565,66 @@ One crucial aspect to highlight is the use of the `average='weighted'` parameter
 
 ## Learning Curves
 
-The wider the gap between the training score and the cross validation score, the more likely your model is overfitting (high variance).
-If the score is low in both training and cross-validation sets this is an indication that our model is underfitting (high bias)
-Logistic Regression Classifier shows the best score in both training and cross-validating sets.
+Learning curves are essential tools for diagnosing the performance of machine learning models and understanding their behavior as the amount of training data increases. By analyzing learning curves, one can draw several important conclusions:
+
+Model Performance and Generalization:
+
+- High Training and Test Scores: If both the training and test scores are high and close to each other, the model is performing well and generalizing effectively to unseen data. This indicates that the model has found a good balance between bias and variance.
+- Low Training and Test Scores: If both scores are low, the model is underfitting, meaning it is too simple to capture the underlying patterns in the data (high bias). Adding more features, increasing model complexity, or trying different algorithms might help improve performance.
+
+Overfitting and Underfitting:
+
+- Large Gap Between Training and Test Scores: A significant difference between high training scores and lower test scores suggests that the model is overfitting the training data (high variance). The model is capturing noise and specific patterns in the training data that do not generalize to new data. Techniques like regularization, pruning, or using simpler models can help mitigate overfitting.
+- Small or No Gap with Low Scores: When both training and test scores are similarly low, the model is underfitting, indicating that it is not complex enough to learn the underlying structure of the data. Increasing the model complexity or trying more sophisticated algorithms can help address underfitting.
+
+Effect of Training Data Size:
+
+- Improvement with More Data: If the test score improves as the training set size increases, the model benefits from more data and is likely to generalize better. This is often seen in models that initially overfit but learn to generalize as they are exposed to more data.
+- Plateauing Performance: When both training and test scores plateau, increasing the amount of data further may not lead to significant improvements in model performance. This suggests that the model has reached its capacity for learning from the available features, and other techniques such as feature engineering or trying different algorithms might be needed to boost performance.
+
+Bias-Variance Tradeoff:
+
+- Learning curves help visualize the bias-variance tradeoff in a model. A high bias model (underfitting) can be identified by low training and test scores, while a high variance model (overfitting) shows a large gap between high training scores and lower test scores. The goal is to find a balance where the model achieves high scores on both training and test sets, indicating low bias and low variance.
+
+
+1. KNeighborsClassifier:
+
+- Both the training and test scores are very close and high, indicating good performance on both the training and validation sets.
+- There is minimal gap between the training and test scores, suggesting that the model generalizes well and does not overfit the data.
+
+2. LogisticRegression:
+
+- Similar to KNeighborsClassifier, the training and test scores are very close and high.
+- The small gap between the training and test scores indicates that the model is also generalizing well and is not overfitting.
+
+3. GaussianNB:
+
+- The training and test scores start with a noticeable gap, but this gap decreases as the number of samples increases.
+- Initially, the model shows signs of overfitting, as indicated by the high variance (large gap between training and test scores).
+- As the number of samples grows, the test score increases and the training score decreases, indicating that the model improves its generalization with more data.
+- By the end, the training and test scores converge, suggesting that the model eventually learns to generalize better.
+
+**Overall Conclusion:**
+
+- KNeighborsClassifier and LogisticRegression models are performing well with both high training and test scores, indicating low bias and low variance.
+- GaussianNB shows an initial overfitting tendency, but with more training data, it improves its performance and generalizes better.
+- Increasing the number of training samples generally improves the performance and generalization of models, as evidenced by the GaussianNB classifier.
 
 ![LC](./plots/lc.png)
 
+
+### Bias vs Variance definition
+Bias: It is related to the assumptions made by the model to learn the target function. Often related to training set. High bias means too simplistic and does not capture the complexity of the data, leading underfitting.
+
+Variance: It is the amount by which the model's predictions would change if it were trained on a different dataset. Often related to test error: If the model has high variance, means that is too complex and fits the training data very closely, capturing noise as well. Whereas a low variance means that the model is less sensitive to the specifics of the training data and generalizes well to unseen data. This typically results in more similar training and test errors.
+
+**Bias-Variance Tradeoff**
+
+The bias-variance tradeoff is the balance that needs to be achieved to minimize the total error in a model. Ideally, we want a model with both low bias and low variance, but in practice, reducing one often increases the other.
+
+High Bias, Low Variance: A simple model that does not fit the training data well and fails to capture the underlying patterns (underfitting), but having consistent results.
+Low Bias, High Variance: A complex model that fits the training data too well and does not generalize to new data (overfitting).
+The goal is to find a model complexity that achieves a good tradeoff between bias and variance, leading to low overall error on both training and test data.
 
 ## Over-sampling technique
 
