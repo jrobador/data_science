@@ -519,7 +519,7 @@ where $\mu $ is the mean vector and $\sigma $ is the standard deviation vector o
 
 Calculate the covariance matrix of the standardized data:
 
-$$\mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}}$$
+$$ \mathbf{C} = \frac{1}{n-1} \mathbf{X}_{\text{std}}^T \mathbf{X}_{\text{std}} $$
 
 where $\mathbf{C}$ is a $p \times p$ matrix.
 
@@ -539,9 +539,9 @@ Sort the eigenvalues in descending order and reorder the eigenvectors accordingl
 
 Project the original data onto the new feature space defined by the eigenvectors. Choose the top $k$ eigenvectors (principal components) where $k$ is the number of dimensions to reduce to. The transformation is:
 
-$$\mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k}$$
+$$ \mathbf{X}_{\text{reduced}} = \mathbf{X}_{\text{std}} \mathbf{V}_{k} $$
 
-where $\mathbf{V}_{k}$ is the matrix containing the top $k  eigenvectors.
+where $\mathbf{V}_{k}$ is the matrix containing the top $k$  eigenvectors.
 
 ![PCA](./plots/pca.png)
 
