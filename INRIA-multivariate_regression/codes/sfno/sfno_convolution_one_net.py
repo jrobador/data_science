@@ -22,6 +22,8 @@ import hcp_utils as hcp
 import torch_harmonics
 import nilearn.plotting as plotting
 
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, explained_variance_score
+
 DIR = r'C:\Github\data_science\INRIA-multivariate_regression\codes\sfno\figures'
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -70,7 +72,8 @@ print (f"{data_cortex.shape=}")
 
 #%%
 # Interpolation to a grid
-sh_order = 12
+sh_order = 80
+print (f"{sh_order=}")
 nlat = int(np.sqrt(len(vertices_left)/2))
 nlon = 2 * nlat
 sphere_src = Sphere(xyz=vertices_left)
@@ -89,10 +92,29 @@ new_data_left = sh_to_sf(sh, sphere_dst, sh_order_max=sh_order)
 sh_2 = sf_to_sh(new_data_left, sphere_dst, sh_order_max=sh_order)
 new_data_original_space_left = sh_to_sf(sh_2, sphere_src, sh_order_max=sh_order)
 
+mse = mean_squared_error(network_left, new_data_original_space_left)
+mae = mean_absolute_error(network_left, new_data_original_space_left)
+Pearson_correlation = np.corrcoef(network_left.flatten(), new_data_original_space_left.flatten())[0, 1]
+print ("For left side:")
+print(f"{mse= }")
+print(f"{mae= }")
+print(f"{Pearson_correlation= }")
+print ("*"*20)
+
+
 sh = sf_to_sh(network_right, sphere_src, sh_order_max=sh_order)
 new_data_right = sh_to_sf(sh, sphere_dst, sh_order_max=sh_order)
 sh_2 = sf_to_sh(new_data_right, sphere_dst, sh_order_max=sh_order)
 new_data_original_space_right = sh_to_sf(sh_2, sphere_src, sh_order_max=sh_order)
+
+mse = mean_squared_error(network_right, new_data_original_space_right)
+mae = mean_absolute_error(network_right, new_data_original_space_right)
+Pearson_correlation = np.corrcoef(network_right.flatten(), new_data_original_space_right.flatten())[0, 1]
+print ("For right side:")
+print(f"{mse= }")
+print(f"{mae= }")
+print(f"{Pearson_correlation= }")
+
 
 new_data_left = new_data_left.reshape(-1, *mesh_theta.shape)
 new_data_right = new_data_right.reshape(-1, *mesh_theta.shape)
@@ -118,6 +140,32 @@ for i, subfig in enumerate(subfigs):
 print(new_data_original_space_left.shape)
 print(new_data_left.shape)
 print(new_data_right.shape)
+
+## COMPUTAR EXPLAINED VARIANCE FOR EACH SH ORDER!
+
+# def compute_explained_variance_ratio(sh_coeffs, sh_order_max):
+#     variances = []
+#     total_variance = np.var(sh_coeffs)
+#     
+#     # Compute variance for each order
+#     for order in range(sh_order_max + 1):
+#         # Extract coefficients corresponding to this order
+#         order_coeffs = extract_coeffs_for_order(sh_coeffs, order)
+#         order_variance = np.var(order_coeffs)
+#         variances.append(order_variance)
+#     
+#     # Calculate explained variance ratio
+#     explained_variance_ratio = np.array(variances) / total_variance
+#     return explained_variance_ratio
+# 
+# def extract_coeffs_for_order(sh_coeffs, order):
+#     # This function should extract the coefficients corresponding to a specific order
+#     # Implementation depends on how sh_coeffs are structured
+#     # Assuming sh_coeffs is an array with shape (n_voxels, n_coeffs)
+#     start_idx = order ** 2
+#     end_idx = (order + 1) ** 2
+#     return sh_coeffs[:, start_idx:end_idx]
+# 
 #%%
 fig_2 = plotting.view_surf(hcp.mesh.inflated, np.hstack([new_data_original_space_left[0],new_data_original_space_right[0]]).clip(0, 1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
