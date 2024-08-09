@@ -22,7 +22,9 @@ import hcp_utils as hcp
 import torch_harmonics
 import nilearn.plotting as plotting
 
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, explained_variance_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+from sklearn.model_selection import train_test_split
 
 DIR = r'C:\Github\data_science\INRIA-multivariate_regression\codes\sfno\figures'
 
@@ -137,35 +139,44 @@ for i, subfig in enumerate(subfigs):
    plots.plot_sphere(new_data_right[i], fig=subfig, cmap='plasma')
 
 #%%
-print(new_data_original_space_left.shape)
-print(new_data_left.shape)
-print(new_data_right.shape)
+def compute_corrected_explained_variance_ratio(sh_coeffs, sh_order_max):
+    variances = []
+    
+    total_variance = np.sum(np.nanvar(sh_coeffs, axis=0))
+    
+    for order in range(sh_order_max + 1):
+        # Extract coefficients corresponding to this order
+        order_coeffs = extract_coeffs_for_order(sh_coeffs, order)
+        
+        if len(order_coeffs) > 0 and not np.isnan(order_coeffs).all() and not np.isinf(order_coeffs).all():
+            order_variance = np.sum(np.nanvar(order_coeffs, axis=0))
+        else:
+            order_variance = 0
+        
+        variances.append(order_variance)
+    
+    explained_variance_ratio = np.array(variances) / total_variance
+    return explained_variance_ratio
 
-## COMPUTAR EXPLAINED VARIANCE FOR EACH SH ORDER!
+def extract_coeffs_for_order(sh_coeffs, order):
+    start_idx = order ** 2
+    end_idx = (order + 1) ** 2
+    return sh_coeffs[:, start_idx:end_idx]
 
-# def compute_explained_variance_ratio(sh_coeffs, sh_order_max):
-#     variances = []
-#     total_variance = np.var(sh_coeffs)
-#     
-#     # Compute variance for each order
-#     for order in range(sh_order_max + 1):
-#         # Extract coefficients corresponding to this order
-#         order_coeffs = extract_coeffs_for_order(sh_coeffs, order)
-#         order_variance = np.var(order_coeffs)
-#         variances.append(order_variance)
-#     
-#     # Calculate explained variance ratio
-#     explained_variance_ratio = np.array(variances) / total_variance
-#     return explained_variance_ratio
-# 
-# def extract_coeffs_for_order(sh_coeffs, order):
-#     # This function should extract the coefficients corresponding to a specific order
-#     # Implementation depends on how sh_coeffs are structured
-#     # Assuming sh_coeffs is an array with shape (n_voxels, n_coeffs)
-#     start_idx = order ** 2
-#     end_idx = (order + 1) ** 2
-#     return sh_coeffs[:, start_idx:end_idx]
-# 
+def plot_explained_variance_ratio(explained_variance_ratio):
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(len(explained_variance_ratio)), explained_variance_ratio, linestyle='-', color='b')
+    plt.title('Explained Variance Ratio by SH Order')
+    plt.xlabel('SH Order')
+    plt.ylabel('Explained Variance Ratio')
+    plt.grid(True)
+    plt.show()
+
+explained_variance_ratio = compute_corrected_explained_variance_ratio(sh, sh_order)
+print("Sum of Explained Variance Ratios:", np.sum(explained_variance_ratio))
+
+plot_explained_variance_ratio(explained_variance_ratio)
+
 #%%
 fig_2 = plotting.view_surf(hcp.mesh.inflated, np.hstack([new_data_original_space_left[0],new_data_original_space_right[0]]).clip(0, 1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
@@ -173,174 +184,132 @@ fig_2 = plotting.view_surf(hcp.mesh.inflated, np.hstack([new_data_original_space
 file_name = "c_four=" + str(sh_order)+ "_net=1.html"
 fig_2.save_as_html(os.path.join(DIR,file_name))
 plt.close()
+
+#%%
+train_data_left, test_data_left = train_test_split(new_data_left, test_size=0.2, random_state=42)
+train_data_right, test_data_right = train_test_split(new_data_right, test_size=0.2, random_state=42)
+
 #%%
 # Autoencoder architecture which reduces dimensionality to half
 
-kernel = 30
-vmfconvolution_learnable_left = gnn.Sequential(
-    'x0',
-    [
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, output_ratio=.5, weights=False, bias=True), 'x0->x1'),
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, output_ratio=.25, weights=False, bias=True), 'x1->x2'),
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.25, output_ratio=.5, weights=False, bias=True), 'x2->x3 '),
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, weights=False, bias=True), 'x3 + x1->x4')
-    ]
-).to(DEVICE)
+#Separar el Autoencoder en Encoder-Decoder
+def create_vmf_convolution_model(nlat=nlat, nlon=nlon, kernel=30):
+    return gnn.Sequential(
+        'x0',
+        [
+            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, output_ratio=.5, weights=False, bias=True), 'x0->x1'),
+            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, output_ratio=.25, weights=False, bias=True), 'x1->x2'),
+            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.25, output_ratio=.5, weights=False, bias=True), 'x2->x3'),
+            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, weights=False, bias=True), 'x3 + x1->x4')
+        ]
+    ).to(DEVICE)
 
-vmfconvolution_learnable_right = gnn.Sequential(
-    'x0',
-    [
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, output_ratio=.5, weights=False, bias=True), 'x0->x1'),
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, output_ratio=.25, weights=False, bias=True), 'x1->x2'),
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.25, output_ratio=.5, weights=False, bias=True), 'x2->x3 '),
-        (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, weights=False, bias=True), 'x3 + x1->x4')
-    ]
-).to(DEVICE)
+def initialize_model(model):
+    for layer in model:
+        nn.init.ones_(layer.bias)
 
-# Autoencoder training
-# Initialize close to identity
-for step in vmfconvolution_learnable_left:
-    nn.init.ones_(step.bias)
-
-# Initialize close to identity
-for step in vmfconvolution_learnable_right:
-    nn.init.ones_(step.bias)
-
-lr = 1.
-optim_left = torch.optim.SGD(vmfconvolution_learnable_left.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optim_left, 50, gamma=0.1)
-
-new_data_tensor_left = torch.Tensor(np.exp(-new_data_left)).to(DEVICE)
-new_data_tensor_left_normed = nn.functional.normalize(torch.exp(-new_data_tensor_left), dim=[-2, -1])
-
-losses = []
-for iter in range(1001):
-    optim_left.zero_grad(set_to_none=True)
-
-    # Forward pass
-    prediction = nn.functional.normalize(vmfconvolution_learnable_left(new_data_tensor_left_normed), dim=[-2, -1])
-
-    # Compute loss
-    loss = ((prediction - new_data_tensor_left_normed) ** 2).sum(dim=[-2, -1]).mean()
-
-    # Backward pass
-    loss.backward()
-
-    # Optimization step
-    optim_left.step()
-
-    # Append and print loss
-    loss_value = loss.item()
-    losses.append(loss_value)
-    if (iter % 50 == 0):
+def train_model(model, data, num_iterations=3000, lr=1.0):
+        
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    data_tensor = torch.Tensor(np.exp(-data)).to(DEVICE)
+    data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
+    
+    losses = []
+    for iter in range(num_iterations):
+        optimizer.zero_grad(set_to_none=True)
+        
+        # Forward pass
+        prediction = nn.functional.normalize(model(data_tensor_normed), dim=[-2, -1])
+        
+        loss = ((prediction - data_tensor_normed) ** 2).sum(dim=[-2, -1]).mean()
+        
+        # Backward pass
+        loss.backward()
+        
+        # Optimization step
+        optimizer.step()
+        
+        # Append and print loss
+        loss_value = loss.item()
+        losses.append(loss_value)
+        if iter % 50 == 0:
             print(f"Iteration {iter}, Loss: {loss_value}")
+    
+    return losses
 
-with torch.no_grad():
-    predicted_left = vmfconvolution_learnable_left(new_data_tensor_left_normed)
+def test_model(model, test_data):
+    #Calculo de metricas
+    test_data_tensor = torch.Tensor(np.exp(-test_data)).to(DEVICE)
+    test_data_tensor_normed = nn.functional.normalize(torch.exp(-test_data_tensor), dim=[-2, -1])
+    
+    with torch.no_grad():
+        predicted = model(test_data_tensor_normed)
+    
+    return test_data_tensor_normed, predicted
 
-fig = plt.figure(layout='constrained')
-subfigs = fig.subfigures(2, 5)
-fig.suptitle(f"Real data vs autoencoder output. Left \n Kernel = " + str(kernel))
+def explained_variance_autoencoder(model, test_data):
+    pass
+#Calculo de Varianza explicada por cada componente
 
-for i in range(min(subfigs.shape[1], predicted_left.shape[0])):
-    plots.plot_sphere(new_data_tensor_left_normed[i].cpu().numpy(), cmap='plasma', fig=subfigs[0, i])
-    plots.plot_sphere(predicted_left[i].cpu().numpy(), cmap='plasma', fig=subfigs[1, i])
+def plot_results(real_data, predicted_data, kernel, side, model):
+    fig = plt.figure(layout='constrained')
+    subfigs = fig.subfigures(2, 5)
+    fig.suptitle(f"Real data vs autoencoder output. {side} \n Kernel = {kernel}")
+    
+    for i in range(min(subfigs.shape[1], predicted_data.shape[0])):
+        plots.plot_sphere(real_data[i].cpu().numpy(), cmap='plasma', fig=subfigs[0, i])
+        plots.plot_sphere(predicted_data[i].cpu().numpy(), cmap='plasma', fig=subfigs[1, i])
+    
+    # Print learned parameters
+    with torch.no_grad():
+        first_layer_kernel = model[0].kernel()
+        last_layer_kernel = model[-1].kernel()
+    
+    plt.figure(layout='constrained')
+    plots.plot_sphere(first_layer_kernel.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (first layer) \n Kernel = {kernel}")
+    
+    plt.figure(layout='constrained')
+    plots.plot_sphere(last_layer_kernel.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (last layer) \n Kernel = {kernel}")
 
-# Print learned parameters
-with torch.no_grad():
-    x_ = vmfconvolution_learnable_left[0].kernel()
-    x__ = vmfconvolution_learnable_left[-1].kernel()
 
-plt.figure(layout='constrained')
-plots.plot_sphere(x_.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (first layer) \n Kernel = " + str(kernel))
-plt.figure(layout='constrained')
-plots.plot_sphere(x__.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (last layer) \n Kernel = " + str(kernel))
+vmfconvolution_learnable_left = create_vmf_convolution_model(kernel=30)
+vmfconvolution_learnable_right = create_vmf_convolution_model(kernel=30)
 
+initialize_model(vmfconvolution_learnable_left)
+initialize_model(vmfconvolution_learnable_right)
 
-# %%
-lr = 1.
-optim_right = torch.optim.SGD(vmfconvolution_learnable_right.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optim_right, 50, gamma=0.1)
+train_data_left, test_data_left = train_test_split(new_data_left, test_size=0.2, random_state=42)
+train_data_right, test_data_right = train_test_split(new_data_right, test_size=0.2, random_state=42)
 
-new_data_tensor_right = torch.Tensor(np.exp(-new_data_right)).to(DEVICE)
-new_data_tensor_right_normed = nn.functional.normalize(torch.exp(-new_data_tensor_right), dim=[-2, -1])
+losses_left = train_model(vmfconvolution_learnable_left, train_data_left)
+losses_right = train_model(vmfconvolution_learnable_right, train_data_right)
 
-losses = []
-for iter in range(1001):
-    optim_right.zero_grad(set_to_none=True)
+test_data_tensor_left_normed, predicted_left = test_model(vmfconvolution_learnable_left, test_data_left)
+test_data_tensor_right_normed, predicted_right = test_model(vmfconvolution_learnable_right, test_data_right)
 
-    # Forward pass
-    prediction = nn.functional.normalize(vmfconvolution_learnable_right(new_data_tensor_right_normed), dim=[-2, -1])
-
-    # Compute loss
-    loss = ((prediction - new_data_tensor_right_normed) ** 2).sum(dim=[-2, -1]).mean()
-
-    # Backward pass
-    loss.backward()
-
-    # Optimization step
-    optim_right.step()
-
-    # Append and print loss
-    loss_value = loss.item()
-    losses.append(loss_value)
-    if (iter % 50 == 0):
-            print(f"Iteration {iter}, Loss: {loss_value}")
-
-with torch.no_grad():
-    predicted_right = vmfconvolution_learnable_right(new_data_tensor_right_normed)
-
-fig = plt.figure(layout='constrained')
-subfigs = fig.subfigures(2, 5)
-fig.suptitle(f"Real data vs autoencoder output. Right \n Kernel = " + str(kernel))
-
-for i in range(min(subfigs.shape[1], predicted_right.shape[0])):
-    plots.plot_sphere(new_data_tensor_right_normed[i].cpu().numpy(), cmap='plasma', fig=subfigs[0, i])
-    plots.plot_sphere(predicted_right[i].cpu().numpy(), cmap='plasma', fig=subfigs[1, i])
-
-# Print learned parameters
-with torch.no_grad():
-    x_ = vmfconvolution_learnable_right[0].kernel()
-    x__ = vmfconvolution_learnable_right[-1].kernel()
-
-plt.figure(layout='constrained')
-plots.plot_sphere(x_.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (first layer) \n Kernel = " + str(kernel))
-plt.figure(layout='constrained')
-plots.plot_sphere(x__.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (last layer) \n Kernel = " + str(kernel))
+plot_results(test_data_tensor_left_normed, predicted_left, kernel=30, side='Left', model=vmfconvolution_learnable_left)
+plot_results(test_data_tensor_right_normed, predicted_right, kernel=30, side='Right', model=vmfconvolution_learnable_right)
 
 #%% Reconstructed after convolution
-
 predicted_reshaped_left = predicted_left.reshape(predicted_left.shape[0], np.prod(predicted_left.shape[1:]))
 print ("Autoencoder output left reshaped to:")
 print (predicted_reshaped_left.shape)
 
-sh_inverse = sf_to_sh(predicted_reshaped_left.cpu(), sphere_dst, sh_order_max=20)
-print(sh_inverse.shape)
-
-new_data_inverse_left = sh_to_sf(sh_inverse, sphere_src, sh_order_max=20)
-print (new_data_inverse_left.shape)
+sh_inverse = sf_to_sh(predicted_reshaped_left.cpu(), sphere_dst, sh_order_max=sh_order)
+new_data_inverse_left = sh_to_sf(sh_inverse, sphere_src, sh_order_max=sh_order)
 
 
 predicted_reshaped_right = predicted_right.reshape(predicted_right.shape[0], np.prod(predicted_right.shape[1:]))
 print ("Autoencoder output right reshaped to:")
 print (predicted_reshaped_right.shape)
 
-sh_inverse = sf_to_sh(predicted_reshaped_right.cpu(), sphere_dst, sh_order_max=20)
-print(sh_inverse.shape)
-
-new_data_inverse_right = sh_to_sf(sh_inverse, sphere_src, sh_order_max=20)
-print (new_data_inverse_right.shape)
+sh_inverse = sf_to_sh(predicted_reshaped_right.cpu(), sphere_dst, sh_order_max=sh_order)
+new_data_inverse_right = sh_to_sf(sh_inverse, sphere_src, sh_order_max=sh_order)
 # %%
 # Plotting the inverse
 
 nd_inverse_one_subject_left = new_data_inverse_left[0,:]
 nd_inverse_one_subject_right = new_data_inverse_right[0,:]
-
-
-print (nd_inverse_one_subject_left.shape)
-print (nd_inverse_one_subject_right.shape)
-
-# %%
 fig_3 = plotting.view_surf(hcp.mesh.inflated, np.hstack([nd_inverse_one_subject_left, nd_inverse_one_subject_right]).clip(0, 1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
 
