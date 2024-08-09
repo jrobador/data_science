@@ -230,17 +230,6 @@ class Autoencoder(nn.Module):
         latent_space = self.encoder(x)
         reconstructed = self.decoder(latent_space)
         return reconstructed, latent_space
-    
-def create_vmf_convolution_model(nlat=nlat, nlon=nlon, kernel=30):
-    return gnn.Sequential(
-        'x0',
-        [
-            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, output_ratio=.5, weights=False, bias=True), 'x0->x1'),
-            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, output_ratio=.25, weights=False, bias=True), 'x1->x2'),
-            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.25, output_ratio=.5, weights=False, bias=True), 'x2->x3'),
-            (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, weights=False, bias=True), 'x3 + x1->x4')
-        ]
-    ).to(DEVICE)
 
 def initialize_model(model):
     for layer in model.parameters():
