@@ -192,7 +192,45 @@ train_data_right, test_data_right = train_test_split(new_data_right, test_size=0
 #%%
 # Autoencoder architecture which reduces dimensionality to half
 
-#Separar el Autoencoder en Encoder-Decoder
+class Encoder(nn.Module):
+    def __init__(self, nlat, nlon, kernel=30):
+        super(Encoder, self).__init__()
+        self.encoder = gnn.Sequential(
+            'x0',
+            [
+                (vmf_convolution.VMFConvolution(kernel, nlat, nlon, output_ratio=.5, weights=False, bias=True), 'x0->x1'),
+                (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, output_ratio=.25, weights=False, bias=True), 'x1->x2')
+            ]
+        )
+    
+    def forward(self, x):
+        return self.encoder(x)
+
+class Decoder(nn.Module):
+    def __init__(self, nlat, nlon, kernel=30):
+        super(Decoder, self).__init__()
+        self.decoder = gnn.Sequential(
+            'x0',
+            [
+                (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.25, output_ratio=.5, weights=False, bias=True), 'x0->x1'),
+                (vmf_convolution.VMFConvolution(kernel, nlat, nlon, input_ratio=.5, weights=False, bias=True), 'x1->x2')
+            ]
+        )
+    
+    def forward(self, x):
+        return self.decoder(x)
+
+class Autoencoder(nn.Module):
+    def __init__(self, nlat, nlon, kernel=30):
+        super(Autoencoder, self).__init__()
+        self.encoder = Encoder(nlat, nlon, kernel)
+        self.decoder = Decoder(nlat, nlon, kernel)
+    
+    def forward(self, x):
+        latent_space = self.encoder(x)
+        reconstructed = self.decoder(latent_space)
+        return reconstructed, latent_space
+    
 def create_vmf_convolution_model(nlat=nlat, nlon=nlon, kernel=30):
     return gnn.Sequential(
         'x0',
@@ -205,11 +243,11 @@ def create_vmf_convolution_model(nlat=nlat, nlon=nlon, kernel=30):
     ).to(DEVICE)
 
 def initialize_model(model):
-    for layer in model:
-        nn.init.ones_(layer.bias)
+    for layer in model.parameters():
+        if layer.requires_grad:
+            nn.init.ones_(layer)
 
-def train_model(model, data, num_iterations=3000, lr=1.0):
-        
+def train_autoencoder(model, data, num_iterations=3000, lr=1.0):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     data_tensor = torch.Tensor(np.exp(-data)).to(DEVICE)
     data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
@@ -237,8 +275,17 @@ def train_model(model, data, num_iterations=3000, lr=1.0):
     
     return losses
 
+def extract_latent_space(model, data):
+    data_tensor = torch.Tensor(np.exp(-data)).to(DEVICE)
+    data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
+    
+    with torch.no_grad():
+        _, latent_space = model(data_tensor_normed)
+    
+    return latent_space.cpu().numpy()
+
 def test_model(model, test_data):
-    #Calculo de metricas
+    #Calculo de metricas!!!
     test_data_tensor = torch.Tensor(np.exp(-test_data)).to(DEVICE)
     test_data_tensor_normed = nn.functional.normalize(torch.exp(-test_data_tensor), dim=[-2, -1])
     
@@ -247,9 +294,9 @@ def test_model(model, test_data):
     
     return test_data_tensor_normed, predicted
 
+#Calculo de Varianza explicada por cada componente!!!
 def explained_variance_autoencoder(model, test_data):
     pass
-#Calculo de Varianza explicada por cada componente
 
 def plot_results(real_data, predicted_data, kernel, side, model):
     fig = plt.figure(layout='constrained')
@@ -271,26 +318,32 @@ def plot_results(real_data, predicted_data, kernel, side, model):
     plt.figure(layout='constrained')
     plots.plot_sphere(last_layer_kernel.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (last layer) \n Kernel = {kernel}")
 
+autoencoder_left  = Autoencoder(nlat, nlon, kernel=30).to(DEVICE)
+autoencoder_right = Autoencoder(nlat, nlon, kernel=30).to(DEVICE)
 
-vmfconvolution_learnable_left = create_vmf_convolution_model(kernel=30)
-vmfconvolution_learnable_right = create_vmf_convolution_model(kernel=30)
-
-initialize_model(vmfconvolution_learnable_left)
-initialize_model(vmfconvolution_learnable_right)
+initialize_model(autoencoder_left)
+initialize_model(autoencoder_right)
 
 train_data_left, test_data_left = train_test_split(new_data_left, test_size=0.2, random_state=42)
 train_data_right, test_data_right = train_test_split(new_data_right, test_size=0.2, random_state=42)
 
-losses_left = train_model(vmfconvolution_learnable_left, train_data_left)
-losses_right = train_model(vmfconvolution_learnable_right, train_data_right)
+losses_left = train_autoencoder(autoencoder_left, train_data_left)
+losses_right = train_autoencoder(autoencoder_right, train_data_right)
 
-test_data_tensor_left_normed, predicted_left = test_model(vmfconvolution_learnable_left, test_data_left)
-test_data_tensor_right_normed, predicted_right = test_model(vmfconvolution_learnable_right, test_data_right)
+latent_train_left = extract_latent_space(autoencoder_left.encoder, train_data_left)
+latent_test_left = extract_latent_space(autoencoder_left.encoder, test_data_left)
 
-plot_results(test_data_tensor_left_normed, predicted_left, kernel=30, side='Left', model=vmfconvolution_learnable_left)
-plot_results(test_data_tensor_right_normed, predicted_right, kernel=30, side='Right', model=vmfconvolution_learnable_right)
+latent_train_right = extract_latent_space(autoencoder_left.encoder, train_data_right)
+latent_test_right = extract_latent_space(autoencoder_left.encoder, test_data_right)
 
-#%% Reconstructed after convolution
+test_data_tensor_left_normed, predicted_left = test_model(autoencoder_left, test_data_left)
+test_data_tensor_right_normed, predicted_right = test_model(autoencoder_right, test_data_right)
+
+plot_results(test_data_tensor_left_normed, predicted_left, kernel=30, side='Left', model=autoencoder_left)
+plot_results(test_data_tensor_right_normed, predicted_right, kernel=30, side='Right', model=autoencoder_right)
+
+# %% 
+# Reconstructed after convolution
 predicted_reshaped_left = predicted_left.reshape(predicted_left.shape[0], np.prod(predicted_left.shape[1:]))
 print ("Autoencoder output left reshaped to:")
 print (predicted_reshaped_left.shape)
