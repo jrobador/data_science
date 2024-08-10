@@ -19,12 +19,16 @@ from torch_geometric import nn as gnn
 from scipy.special import softmax
 import os
 import hcp_utils as hcp
+
 import torch_harmonics
 import nilearn.plotting as plotting
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import StandardScaler
 
 from sklearn.model_selection import train_test_split
+
+import pandas as pd
 
 DIR = r'C:\Github\data_science\INRIA-multivariate_regression\codes\sfno\figures'
 
@@ -41,14 +45,44 @@ def compute_new_angles_grid(nlat, nlon):
 # Data and vertices representation
 
 file_path = os.path.join(r'C:\Github\pavi_data', '12_mean_sample_post.pt')
+path_scores = os.path.join(r'C:\Github\pavi_data', '12_mean_sample_post.pt') #Poner la ubicacion correcta!!!
+
 sample = torch.load(file_path, map_location=DEVICE)
 
 temperature = 1
 data = softmax(sample['theta_s'].detach().cpu() / temperature, axis=-1)
 
+#%%
+# Handling missing values
+  
+def _preprocess_scores(self, data):
+    data.Subject = data.Subject.astype('str')
+    
+    # Discard subjects with Nan-valued scores or subjects not in the list
+    mask = data[self.categories].isna().sum(axis=1) == 0
+    id_subjects_ok = set(data[mask].Subject) & set(self.subjects_list)
+    mask = data.Subject.isin(id_subjects_ok)
+    data = data[mask][self.categories + ['Subject']]
+    data = data.set_index('Subject')
+    scaler = StandardScaler()
+    data = pd.DataFrame(
+        data=scaler.fit_transform(data),
+        columns=data.columns,
+        index=data.index
+    )
+    mask = pd.Series(self.subjects_list).isin(id_subjects_ok).to_numpy()
+    return data.loc[self.subjects_list[mask]], mask
+
+scores = pd.read_csv(path_scores)
+scores, scores_mask = _preprocess_scores(scores)
+
+y = scores.to_numpy()
+X = np.array([x.cpu().numpy() for x in data])[scores_mask]
+#Anda a chequear que esto este bien...
+
+
 vertices = hcp.mesh['sphere'][0] / np.linalg.norm(hcp.mesh['sphere'][0], axis=1, keepdims=True)
 mask = hcp.cortex_data(np.ones(len(vertices))).astype(bool)
-
 print(f"{hcp.mesh['sphere'][0].shape=}")
 
 #%%
