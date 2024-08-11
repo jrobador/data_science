@@ -591,11 +591,13 @@ plt.show()
 
 # %%
 # Over-sampling technique
-for clf in clf_test:
-   pipeline = make_pipeline(SMOTE(sampling_strategy='auto', random_state=37, k_neighbors=5, n_jobs=-1), clf)
-   pipeline.fit(X, y)
+for i, (train_index, test_index) in enumerate(sss.split(X, y)):
+    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
+    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
+    
+    for clf in clf_test:
+       pipeline = (SMOTE(sampling_strategy='auto', random_state=37, k_neighbors=5, n_jobs=-1), clf)
+       pipeline.fit(X_train, y_train)
 
 print(classification_report_imbalanced(y_test, pipeline.predict(X_test)))
-
 # %%
-    

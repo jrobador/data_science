@@ -204,6 +204,8 @@ def plot_explained_variance_ratio(explained_variance_ratio):
     plt.xlabel('SH Order')
     plt.ylabel('Explained Variance Ratio')
     plt.grid(True)
+    file_name = "expl_var.png"
+    plt.savefig(os.path.join(DIR,file_name))
     plt.show()
 
 explained_variance_ratio = compute_corrected_explained_variance_ratio(sh, sh_order)
