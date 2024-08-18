@@ -322,7 +322,7 @@ def initialize_model(model):
         if layer.requires_grad:
             nn.init.ones_(layer)
 
-def train_autoencoder(model, data, num_iterations=1000, lr=1.0):
+def train_autoencoder(model, data, num_iterations=500, lr=1.0):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     data_tensor = torch.Tensor(np.exp(-data)).to(DEVICE)
     data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
@@ -332,7 +332,7 @@ def train_autoencoder(model, data, num_iterations=1000, lr=1.0):
         optimizer.zero_grad(set_to_none=True)
         
         # Forward pass
-        reconstructed, latent_space = model(data_tensor_normed)
+        reconstructed, _ = model(data_tensor_normed)
 
         reconstructed_normed = nn.functional.normalize(reconstructed, dim=[-2, -1])
         
@@ -386,9 +386,9 @@ def plot_results(real_data, predicted_data, kernel, side, model):
     
     # Print learned parameters
     with torch.no_grad():
-        first_layer_kernel = model[0].kernel()
-        last_layer_kernel = model[-1].kernel()
-    
+        first_layer_kernel = model.encoder.encoder[0].kernel()
+        last_layer_kernel = model.decoder.decoder[-1].kernel()
+ 
     plt.figure(layout='constrained')
     plots.plot_sphere(first_layer_kernel.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (first layer) \n Kernel = {kernel}")
     
@@ -440,7 +440,7 @@ new_data_inverse_right = sh_to_sf(sh_inverse, sphere_src, sh_order_max=sh_order)
 
 nd_inverse_one_subject_left = new_data_inverse_left[0,:]
 nd_inverse_one_subject_right = new_data_inverse_right[0,:]
-fig_3 = plotting.view_surf(hcp.mesh.inflated, np.hstack([nd_inverse_one_subject_left, nd_inverse_one_subject_right]).clip(0, 1), symmetric_cmap=False, cmap='Oranges',
+fig_3 = plotting.view_surf(hcp.mesh.inflated, np.hstack([nd_inverse_one_subject_left, nd_inverse_one_subject_right]), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
 
 file_name = "autoenc_output.html"
