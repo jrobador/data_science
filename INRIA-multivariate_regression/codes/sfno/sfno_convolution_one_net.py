@@ -28,6 +28,8 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn.model_selection import train_test_split
 
+import json
+
 import pandas as pd
 
 DIR = r'C:\Github\data_science\INRIA-multivariate_regression\codes\sfno\figures'
@@ -45,24 +47,69 @@ def compute_new_angles_grid(nlat, nlon):
 # Data and vertices representation
 
 file_path = os.path.join(r'C:\Github\pavi_data', '12_mean_sample_post.pt')
-path_scores = os.path.join(r'C:\Github\pavi_data', '12_mean_sample_post.pt') #Poner la ubicacion correcta!!!
+path_scores = os.path.join(r'C:\Github\pavi_data', 'scores_camcan.csv')
+path_jobs = os.path.join(r'C:\Github\pavi_data\jobs.json')
 
 sample = torch.load(file_path, map_location=DEVICE)
 
 temperature = 1
-data = softmax(sample['theta_s'].detach().cpu() / temperature, axis=-1)
+
+## Para la regresion no se necesita el softmax!
+#data = softmax(sample['theta_s'].detach().cpu() / temperature, axis=-1)
+data = sample['theta_s'].detach().cpu()
 
 #%%
 # Handling missing values
-  
-def _preprocess_scores(self, data):
+
+categories = [
+    'BentonFaces_total',
+    'Cattell_total',
+    'EkmanEmHex_pca1',
+    'FamousFaces_details',
+    'Hotel_time',
+    'PicturePriming_baseline_acc',
+    'Proverbs',
+    'Synsem_prop_error',
+    'Synsem_RT',
+    'VSTMcolour_K_mean',
+    'VSTMcolour_K_precision',
+    'VSTMcolour_K_doubt',
+    'VSTMcolour_MSE'
+]
+
+fancy_categories = [
+    'Benton faces',
+    'Fluid Intelligence',
+    'Emotion expression recognition',
+    'Famous faces',
+    'Hotel task',
+    'Picture priming',
+    'Proverb comprehension',
+    'Sentence comprehension (unacceptable error)',
+    'Sentence comprehension (reaction time)',
+    'Visual short term memory (mean)',
+    'Visual short term memory (precision)',
+    'Visual short term memory (doubt)',
+    'Visual short term memory (MSE)',
+]
+
+n_job = 44
+
+with open(path_jobs, 'r') as f:
+    jobs = json.load(f)
+seed = jobs['seed'][n_job]
+subjects_list = jobs['sub_list'][n_job]
+
+subjects_list = np.array([str(s) for s in subjects_list])
+
+def _preprocess_scores(data):
     data.Subject = data.Subject.astype('str')
     
     # Discard subjects with Nan-valued scores or subjects not in the list
-    mask = data[self.categories].isna().sum(axis=1) == 0
-    id_subjects_ok = set(data[mask].Subject) & set(self.subjects_list)
+    mask = data[categories].isna().sum(axis=1) == 0
+    id_subjects_ok = set(data[mask].Subject) & set(subjects_list)
     mask = data.Subject.isin(id_subjects_ok)
-    data = data[mask][self.categories + ['Subject']]
+    data = data[mask][categories + ['Subject']]
     data = data.set_index('Subject')
     scaler = StandardScaler()
     data = pd.DataFrame(
@@ -70,20 +117,23 @@ def _preprocess_scores(self, data):
         columns=data.columns,
         index=data.index
     )
-    mask = pd.Series(self.subjects_list).isin(id_subjects_ok).to_numpy()
-    return data.loc[self.subjects_list[mask]], mask
+    mask = pd.Series(subjects_list).isin(id_subjects_ok).to_numpy()
+    return data.loc[subjects_list[mask]], mask
 
 scores = pd.read_csv(path_scores)
 scores, scores_mask = _preprocess_scores(scores)
 
 y = scores.to_numpy()
 X = np.array([x.cpu().numpy() for x in data])[scores_mask]
-#Anda a chequear que esto este bien...
-
+data = X
 
 vertices = hcp.mesh['sphere'][0] / np.linalg.norm(hcp.mesh['sphere'][0], axis=1, keepdims=True)
 mask = hcp.cortex_data(np.ones(len(vertices))).astype(bool)
 print(f"{hcp.mesh['sphere'][0].shape=}")
+
+#%%
+print (X.shape)
+print (data.shape)
 
 #%%
 vertices_left  = vertices[:32492]
@@ -108,7 +158,7 @@ print (f"{data_cortex.shape=}")
 
 #%%
 # Interpolation to a grid
-sh_order = 80
+sh_order = 48
 print (f"{sh_order=}")
 nlat = int(np.sqrt(len(vertices_left)/2))
 nlon = 2 * nlat
@@ -272,7 +322,7 @@ def initialize_model(model):
         if layer.requires_grad:
             nn.init.ones_(layer)
 
-def train_autoencoder(model, data, num_iterations=3000, lr=1.0):
+def train_autoencoder(model, data, num_iterations=1000, lr=1.0):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     data_tensor = torch.Tensor(np.exp(-data)).to(DEVICE)
     data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
@@ -282,9 +332,11 @@ def train_autoencoder(model, data, num_iterations=3000, lr=1.0):
         optimizer.zero_grad(set_to_none=True)
         
         # Forward pass
-        prediction = nn.functional.normalize(model(data_tensor_normed), dim=[-2, -1])
+        reconstructed, latent_space = model(data_tensor_normed)
+
+        reconstructed_normed = nn.functional.normalize(reconstructed, dim=[-2, -1])
         
-        loss = ((prediction - data_tensor_normed) ** 2).sum(dim=[-2, -1]).mean()
+        loss = ((reconstructed_normed - data_tensor_normed) ** 2).sum(dim=[-2, -1]).mean()
         
         # Backward pass
         loss.backward()
@@ -315,7 +367,7 @@ def test_model(model, test_data):
     test_data_tensor_normed = nn.functional.normalize(torch.exp(-test_data_tensor), dim=[-2, -1])
     
     with torch.no_grad():
-        predicted = model(test_data_tensor_normed)
+        predicted, _ = model(test_data_tensor_normed)
     
     return test_data_tensor_normed, predicted
 
@@ -355,11 +407,11 @@ train_data_right, test_data_right = train_test_split(new_data_right, test_size=0
 losses_left = train_autoencoder(autoencoder_left, train_data_left)
 losses_right = train_autoencoder(autoencoder_right, train_data_right)
 
-latent_train_left = extract_latent_space(autoencoder_left.encoder, train_data_left)
-latent_test_left = extract_latent_space(autoencoder_left.encoder, test_data_left)
+latent_train_left = extract_latent_space(autoencoder_left, train_data_left)
+latent_test_left = extract_latent_space(autoencoder_left, test_data_left)
 
-latent_train_right = extract_latent_space(autoencoder_left.encoder, train_data_right)
-latent_test_right = extract_latent_space(autoencoder_left.encoder, test_data_right)
+latent_train_right = extract_latent_space(autoencoder_right, train_data_right)
+latent_test_right = extract_latent_space(autoencoder_right, test_data_right)
 
 test_data_tensor_left_normed, predicted_left = test_model(autoencoder_left, test_data_left)
 test_data_tensor_right_normed, predicted_right = test_model(autoencoder_right, test_data_right)
