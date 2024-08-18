@@ -143,7 +143,7 @@ print (f"{vertices_left.shape=}, {vertices_right.shape=}")
 #%% Representation of the network for one subject before transformation
 sj_1 = data[0, :, 0]
 
-fig_1 = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(sj_1, fill=0), symmetric_cmap=False, cmap='Oranges',
+fig_1 = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(sj_1, fill=0).clip(0,1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
 
 file_name = "cortex_original.html"
@@ -158,7 +158,7 @@ print (f"{data_cortex.shape=}")
 
 #%%
 # Interpolation to a grid
-sh_order = 48
+sh_order = 24
 print (f"{sh_order=}")
 nlat = int(np.sqrt(len(vertices_left)/2))
 nlon = 2 * nlat
@@ -223,7 +223,7 @@ for i, subfig in enumerate(subfigs):
    plots.plot_sphere(new_data_right[i], fig=subfig, cmap='plasma')
 
 #%%
-def compute_corrected_explained_variance_ratio(sh_coeffs, sh_order_max):
+def explained_variance_reshape(sh_coeffs, sh_order_max):
     variances = []
     
     total_variance = np.sum(np.nanvar(sh_coeffs, axis=0))
@@ -240,29 +240,25 @@ def compute_corrected_explained_variance_ratio(sh_coeffs, sh_order_max):
         variances.append(order_variance)
     
     explained_variance_ratio = np.array(variances) / total_variance
-    return explained_variance_ratio
+    print("Sum of Explained Variance Ratios:", np.sum(explained_variance_ratio))
 
-def extract_coeffs_for_order(sh_coeffs, order):
-    start_idx = order ** 2
-    end_idx = (order + 1) ** 2
-    return sh_coeffs[:, start_idx:end_idx]
-
-def plot_explained_variance_ratio(explained_variance_ratio):
     plt.figure(figsize=(10, 6))
     plt.plot(range(len(explained_variance_ratio)), explained_variance_ratio, linestyle='-', color='b')
     plt.title('Explained Variance Ratio by SH Order')
     plt.xlabel('SH Order')
     plt.ylabel('Explained Variance Ratio')
     plt.grid(True)
-    file_name = "expl_var.png"
+    file_name = "expl_var_reshape.png"
     plt.savefig(os.path.join(DIR,file_name))
     plt.show()
 
-explained_variance_ratio = compute_corrected_explained_variance_ratio(sh, sh_order)
-print("Sum of Explained Variance Ratios:", np.sum(explained_variance_ratio))
+def extract_coeffs_for_order(sh_coeffs, order):
+    start_idx = order ** 2
+    end_idx = (order + 1) ** 2
+    return sh_coeffs[:, start_idx:end_idx]
 
-plot_explained_variance_ratio(explained_variance_ratio)
 
+explained_variance_reshape(sh, sh_order)
 #%%
 fig_2 = plotting.view_surf(hcp.mesh.inflated, np.hstack([new_data_original_space_left[0],new_data_original_space_right[0]]).clip(0, 1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
@@ -274,6 +270,7 @@ plt.close()
 #%%
 train_data_left, test_data_left = train_test_split(new_data_left, test_size=0.2, random_state=42)
 train_data_right, test_data_right = train_test_split(new_data_right, test_size=0.2, random_state=42)
+
 
 #%%
 # Autoencoder architecture which reduces dimensionality to half
@@ -371,9 +368,26 @@ def test_model(model, test_data):
     
     return test_data_tensor_normed, predicted
 
-#Calculo de Varianza explicada por cada componente!!!
-def explained_variance_autoencoder(model, test_data):
-    pass
+def explained_variance_autoencoder(latent_space):
+
+    flattened_latent_space = latent_space.reshape(latent_space.shape[0], -1)
+    print (flattened_latent_space.shape)
+    variances = np.nanvar(flattened_latent_space, axis=0)
+    print (variances.shape)
+    total_variance = np.sum(variances)
+    print (total_variance)
+    # Compute explained variance ratio
+    explained_variance_ratio = variances / total_variance
+    print("Sum of Explained Variance Ratios:", np.sum(explained_variance_ratio))
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(len(explained_variance_ratio)), explained_variance_ratio, linestyle='-', color='b', marker='o')
+    plt.title('Explained Variance Ratio by Latent Space Component')
+    plt.xlabel('Latent Space Component')
+    plt.ylabel('Explained Variance Ratio')
+    plt.grid(True)
+    plt.savefig(os.path.join(DIR,'expl_var_autoencoder.png'))
+    plt.show()
 
 def plot_results(real_data, predicted_data, kernel, side, model):
     fig = plt.figure(layout='constrained')
@@ -395,6 +409,7 @@ def plot_results(real_data, predicted_data, kernel, side, model):
     plt.figure(layout='constrained')
     plots.plot_sphere(last_layer_kernel.cpu(), colorbar=True, vmin=-5, vmax=5, central_latitude=90, title=f"Learned parameters (last layer) \n Kernel = {kernel}")
 
+#%%
 autoencoder_left  = Autoencoder(nlat, nlon, kernel=30).to(DEVICE)
 autoencoder_right = Autoencoder(nlat, nlon, kernel=30).to(DEVICE)
 
@@ -409,9 +424,11 @@ losses_right = train_autoencoder(autoencoder_right, train_data_right)
 
 latent_train_left = extract_latent_space(autoencoder_left, train_data_left)
 latent_test_left = extract_latent_space(autoencoder_left, test_data_left)
+explained_variance_autoencoder(latent_test_left)
 
 latent_train_right = extract_latent_space(autoencoder_right, train_data_right)
 latent_test_right = extract_latent_space(autoencoder_right, test_data_right)
+explained_variance_autoencoder(latent_test_right)
 
 test_data_tensor_left_normed, predicted_left = test_model(autoencoder_left, test_data_left)
 test_data_tensor_right_normed, predicted_right = test_model(autoencoder_right, test_data_right)
@@ -453,4 +470,3 @@ fig_1
 fig_2
 # %%
 fig_3
-# %%
