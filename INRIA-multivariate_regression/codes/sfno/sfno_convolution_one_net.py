@@ -20,7 +20,6 @@ from scipy.special import softmax
 import os
 import hcp_utils as hcp
 
-import torch_harmonics
 import nilearn.plotting as plotting
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
