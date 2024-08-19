@@ -390,7 +390,6 @@ def test_model(model, test_data):
 def explained_variance_autoencoder(latent_space):
 
     flattened_latent_space = latent_space.reshape(latent_space.shape[0], -1)
-    print (flattened_latent_space.shape)
     variances = np.nanvar(flattened_latent_space, axis=0)
     total_variance = np.sum(variances)
     # Compute explained variance ratio
@@ -462,7 +461,6 @@ print (predicted_reshaped_left.shape)
 sh_inverse = sf_to_sh(predicted_reshaped_left.cpu(), sphere_dst, sh_order_max=sh_order)
 new_data_inverse_left = sh_to_sf(sh_inverse, sphere_src, sh_order_max=sh_order)
 
-
 predicted_reshaped_right = predicted_right.reshape(predicted_right.shape[0], np.prod(predicted_right.shape[1:]))
 print ("Autoencoder output right reshaped to:")
 print (predicted_reshaped_right.shape)
@@ -474,7 +472,7 @@ new_data_inverse_right = sh_to_sf(sh_inverse, sphere_src, sh_order_max=sh_order)
 
 nd_inverse_one_subject_left = new_data_inverse_left[0,:]
 nd_inverse_one_subject_right = new_data_inverse_right[0,:]
-fig_3 = plotting.view_surf(hcp.mesh.inflated, np.hstack([nd_inverse_one_subject_left, nd_inverse_one_subject_right]), symmetric_cmap=False, cmap='Oranges',
+fig_3 = plotting.view_surf(hcp.mesh.inflated, np.hstack([nd_inverse_one_subject_left, nd_inverse_one_subject_right]).clip(0,1), symmetric_cmap=False, cmap='Oranges',
     threshold=0.001)
 
 file_name = "autoenc_output.html"
