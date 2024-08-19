@@ -132,10 +132,6 @@ mask = hcp.cortex_data(np.ones(len(vertices))).astype(bool)
 print(f"{hcp.mesh['sphere'][0].shape=}")
 
 #%%
-print (X.shape)
-print (data.shape)
-
-#%%
 vertices_left  = vertices[:32492]
 vertices_right = vertices[32492:]
 
@@ -152,13 +148,11 @@ plt.close()
 #%%
 data_cortex = np.zeros((data.shape[0], len(mask), data.shape[-1]))
 data_cortex[:, mask, :] = data
-
-
 print (f"{data_cortex.shape=}")
 
 #%%
 # Interpolation to a grid
-sh_order = 24
+sh_order = 72
 print (f"{sh_order=}")
 nlat = int(np.sqrt(len(vertices_left)/2))
 nlon = 2 * nlat
@@ -319,7 +313,7 @@ def initialize_model(model):
         if layer.requires_grad:
             nn.init.ones_(layer)
 
-def train_autoencoder(model, data, num_iterations=500, lr=1.0):
+def train_autoencoder(model, data, num_iterations=2000, lr=1.0):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     data_tensor = torch.Tensor(np.exp(-data)).to(DEVICE)
     data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
@@ -359,12 +353,37 @@ def extract_latent_space(model, data):
     return latent_space.cpu().numpy()
 
 def test_model(model, test_data):
-    #Calculo de metricas!!!
     test_data_tensor = torch.Tensor(np.exp(-test_data)).to(DEVICE)
     test_data_tensor_normed = nn.functional.normalize(torch.exp(-test_data_tensor), dim=[-2, -1])
     
     with torch.no_grad():
         predicted, _ = model(test_data_tensor_normed)
+
+    # Convert tensors to numpy arrays for metric calculation
+    test_data_np = test_data_tensor_normed.cpu().numpy()
+    predicted_np = predicted.cpu().numpy()
+    
+    data_tensor = torch.Tensor(np.exp(-test_data)).to(DEVICE)
+    data_tensor_normed = nn.functional.normalize(torch.exp(-data_tensor), dim=[-2, -1])
+
+    reconstructed_normed = nn.functional.normalize(predicted, dim=[-2, -1])
+
+    # Compute MAE and MSE
+    mae = mean_absolute_error(test_data_np.flatten(), predicted_np.flatten())
+    mse = mean_squared_error(test_data_np.flatten(), predicted_np.flatten())
+    loss = ((reconstructed_normed - data_tensor_normed) ** 2).sum(dim=[-2, -1]).mean()
+
+    # Compute correlation coefficient
+    corrcoef = np.corrcoef(test_data_np.flatten(), predicted_np.flatten())[0, 1]
+    
+    metrics = {
+        'mean_absolute_error': mae,
+        'mean_squared_error': mse,
+        'correlation_coefficient': corrcoef,
+        'loss': loss.item()
+    }
+
+    print (metrics)
     
     return test_data_tensor_normed, predicted
 
@@ -373,9 +392,7 @@ def explained_variance_autoencoder(latent_space):
     flattened_latent_space = latent_space.reshape(latent_space.shape[0], -1)
     print (flattened_latent_space.shape)
     variances = np.nanvar(flattened_latent_space, axis=0)
-    print (variances.shape)
     total_variance = np.sum(variances)
-    print (total_variance)
     # Compute explained variance ratio
     explained_variance_ratio = variances / total_variance
     print("Sum of Explained Variance Ratios:", np.sum(explained_variance_ratio))
@@ -470,3 +487,4 @@ fig_1
 fig_2
 # %%
 fig_3
+# %%
