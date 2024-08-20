@@ -4,7 +4,7 @@ import torch
 from data_processing import dataset_preprocessing, data_with_mask
 from sph_functions import interpolation_to_grid, hemisphere_to_spherical, spherical_to_hemisphere
 from plots_pavi import plot_sphere
-from sklearn.neural_network import MLPRegressor
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import train_test_split
 from scipy.stats.mstats import pearsonr
 
@@ -71,7 +71,7 @@ y = y.astype(np.float32)
 
 X_train, X_test, y_train, y_test = train_test_split(sph_data, y, random_state=42)
 
-model = MLPRegressor(hidden_layer_sizes=(1000,500),random_state=42, max_iter=2500, verbose=True)
+model = Ridge()
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
