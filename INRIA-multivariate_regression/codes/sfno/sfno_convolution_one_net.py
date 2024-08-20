@@ -151,7 +151,7 @@ print (f"{data_cortex.shape=}")
 
 #%%
 # Interpolation to a grid
-sh_order = 72
+sh_order = 24
 print (f"{sh_order=}")
 nlat = int(np.sqrt(len(vertices_left)/2))
 nlon = 2 * nlat
@@ -180,7 +180,7 @@ print(f"{mae= }")
 print(f"{Pearson_correlation= }")
 print ("*"*20)
 
-
+sphere_src = Sphere(xyz=vertices_right)
 sh = sf_to_sh(network_right, sphere_src, sh_order_max=sh_order)
 new_data_right = sh_to_sf(sh, sphere_dst, sh_order_max=sh_order)
 sh_2 = sf_to_sh(new_data_right, sphere_dst, sh_order_max=sh_order)
