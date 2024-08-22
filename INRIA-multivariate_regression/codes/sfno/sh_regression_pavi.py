@@ -7,6 +7,7 @@ from plots_pavi import plot_sphere
 
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPRegressor
 from scipy.stats.mstats import pearsonr
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ import seaborn as sns
 import pandas as pd
 
 DIR = r'C:\Github\pavi_data'
-
+DIR_FIG = r'C:\Github\data_science\INRIA-multivariate_regression\codes\sfno\figures'
 path_file   = os.path.join(DIR, '12_mean_sample_post.pt')
 path_jobs   = os.path.join(DIR, 'jobs.json')
 path_scores = os.path.join(DIR, 'scores_camcan.csv')
@@ -23,7 +24,7 @@ n_job = 44
 
 
 net_number = None
-sh_orders = [80]
+sh_orders = [6]
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -75,7 +76,7 @@ for sh_order in sh_orders:
 
     X_train, X_test, y_train, y_test = train_test_split(sph_data, y, random_state=42)
 
-    model = Ridge()
+    model = MLPRegressor(hidden_layer_sizes=(1500))
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
@@ -93,7 +94,7 @@ plt.title('r-Pearson correlation by SH Order')
 plt.xlabel('SH Order')
 plt.ylabel('r-Pearson correlation')
 plt.grid(True)
-plt.savefig(os.path.join(DIR,'p-score_vs_sh-order2.png'))
+#plt.savefig(os.path.join(DIR_FIG,'p-score_vs_sh-order2.png'))
 plt.show()
 # %%
 scores_
