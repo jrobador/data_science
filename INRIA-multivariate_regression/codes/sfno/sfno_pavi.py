@@ -54,15 +54,15 @@ fancy_categories = [
 n_scores = len(fancy_categories)
 
 #%%
-nlat, nlon, mesh_theta, sphere_src_left, sphere_src_right, sphere_dst = interpolation_to_grid(vertices_left, vertices_right, sh_orders)
+mesh_theta, sphere_src_left, sphere_src_right, sphere_dst = interpolation_to_grid(vertices_left, vertices_right, sh_orders)
 sph_data_left  = hemisphere_to_spherical(network_left, sphere_src_left, sphere_dst, sh_orders)
 sph_data_right = hemisphere_to_spherical(network_right, sphere_src_right, sphere_dst, sh_orders)
 
 print(sph_data_left.shape)
 print(sph_data_right.shape)
 
-sph_data_left = sph_data_left.reshape(-1, *mesh_theta.shape)
-sph_data_right = sph_data_right.reshape(-1, *mesh_theta.shape)
+sph_data_left = sph_data_left.reshape(-1,mesh_theta.shape[0], mesh_theta.shape[1],network_left.shape[-1])
+sph_data_right = sph_data_right.reshape(-1,mesh_theta.shape[0], mesh_theta.shape[1],network_right.shape[-1])
 
 if isinstance(net_number, int):
     plot_sphere(sph_data_left, net_number)
@@ -72,8 +72,8 @@ print(sph_data_left.shape)
 print(sph_data_right.shape)
 #%%
 
-autoencoder_left  = Autoencoder(nlat, nlon, kernel=30).to(DEVICE)
-autoencoder_right = Autoencoder(nlat, nlon, kernel=30).to(DEVICE)
+autoencoder_left  = Autoencoder(mesh_theta.shape[0], mesh_theta.shape[1], kernel=30).to(DEVICE)
+autoencoder_right = Autoencoder(mesh_theta.shape[0], mesh_theta.shape[1], kernel=30).to(DEVICE)
 
 initialize_model(autoencoder_left)
 initialize_model(autoencoder_right)
