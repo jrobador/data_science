@@ -68,24 +68,43 @@ if isinstance(net_number, int):
     plot_sphere(sph_data_left, net_number)
     plot_sphere(sph_data_right, net_number)
 
+print("New shape:")
 print(sph_data_left.shape)
 print(sph_data_right.shape)
 #%%
+autoencoders_left  = [Autoencoder(127, 254, kernel=30).to(DEVICE) for _ in range(sph_data_left.shape[-1])]
+autoencoders_right = [Autoencoder(127, 254, kernel=30).to(DEVICE) for _ in range(sph_data_left.shape[-1])]
 
-autoencoder_left  = Autoencoder(mesh_theta.shape[0], mesh_theta.shape[1], kernel=30).to(DEVICE)
-autoencoder_right = Autoencoder(mesh_theta.shape[0], mesh_theta.shape[1], kernel=30).to(DEVICE)
-
-initialize_model(autoencoder_left)
-initialize_model(autoencoder_right)
+for ae_l, ae_r in zip(autoencoders_left, autoencoders_right):
+    initialize_model(ae_l)
+    initialize_model(ae_r)
 
 train_data_left, test_data_left = train_test_split(sph_data_left, test_size=0.2, random_state=42)
 train_data_right, test_data_right = train_test_split(sph_data_right, test_size=0.2, random_state=42)
+#%%
+train_latent_space_left = np.zeros((train_data_left.shape[0], 32, 64, train_data_left.shape[-1]), dtype=np.float32)
+train_latent_space_right = np.zeros((train_data_right.shape[0], 32, 64, train_data_left.shape[-1]), dtype=np.float32)
 
-losses_left = train_autoencoder(autoencoder_left, train_data_left, DEVICE)
-losses_right = train_autoencoder(autoencoder_right, train_data_right, DEVICE)
 
-latent_space_left  = extract_latent_space(autoencoder_left, DEVICE)
-latent_space_right = extract_latent_space(autoencoder_right, DEVICE)
+for i in range (train_data_left.shape[-1]):
+    print (f"Network number {1+i}")
+    train_autoencoder(autoencoders_left[i],  train_data_left[:,:,:,i], DEVICE, num_iterations=100)
+    train_autoencoder(autoencoders_right[i], train_data_right[:,:,:,i], DEVICE, num_iterations=100)
 
-test_data_tensor_left_normed, predicted_left = test_autoencoder(autoencoder_left, test_data_left, DEVICE)
-test_data_tensor_right_normed, predicted_right = test_autoencoder(autoencoder_right, test_data_right, DEVICE)
+    lsp_left  = extract_latent_space(autoencoders_left[i], train_data_left[:,:,:,i], DEVICE)
+    lsp_right = extract_latent_space(autoencoders_right[i],train_data_right[:,:,:,i], DEVICE)
+
+    train_latent_space_left[:, :, :, i]  = lsp_left
+    train_latent_space_right[:, :, :, i] = lsp_right
+
+#%%
+tr_lsp_lft = train_latent_space_left.reshape(train_latent_space_left.shape[0], -1)
+tr_lsp_rght = train_latent_space_right.reshape(train_latent_space_right.shape[0], -1)
+
+tr_lsp = np.concatenate ((tr_lsp_lft, tr_lsp_rght), axis=1)
+
+print (tr_lsp_lft.shape)
+print (tr_lsp_rght.shape)
+print (tr_lsp.shape)
+# %%
+# Falta el test. Falta la regresion final.
