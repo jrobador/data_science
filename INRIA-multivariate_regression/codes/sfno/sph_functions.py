@@ -19,7 +19,7 @@ def interpolation_to_grid(vertices_left, vertices_right, sh_order=24):
     mesh_theta, mesh_phi = compute_new_angles_grid(nlat, nlon)
     sphere_dst = Sphere(theta=mesh_theta.ravel(), phi=mesh_phi.ravel())
     
-    return nlat, nlon, mesh_theta, sphere_src_left, sphere_src_right, sphere_dst
+    return mesh_theta, sphere_src_left, sphere_src_right, sphere_dst
 
 
 def hemisphere_to_spherical(network, sphere_src, sphere_dst, sh_order=24):
