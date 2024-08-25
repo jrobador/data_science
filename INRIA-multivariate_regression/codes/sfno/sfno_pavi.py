@@ -79,8 +79,24 @@ for ae_l, ae_r in zip(autoencoders_left, autoencoders_right):
     initialize_model(ae_l)
     initialize_model(ae_r)
 
-train_data_left, test_data_left = train_test_split(sph_data_left, test_size=0.2, random_state=42)
-train_data_right, test_data_right = train_test_split(sph_data_right, test_size=0.2, random_state=42)
+
+#%%
+# Joint split for the left and right hemisphere networks and the corresponding labels (y).
+
+# Step 1: Perform a joint split based on the indices
+# Generate the same train/test split indices for both hemispheres
+train_indices, test_indices = train_test_split(np.arange(sph_data_left.shape[0]), test_size=0.2, random_state=42)
+
+# Step 2: Split the data using these indices
+train_data_left = sph_data_left[train_indices]
+test_data_left = sph_data_left[test_indices]
+train_data_right = sph_data_left[train_indices]
+test_data_right = sph_data_left[test_indices]
+
+# Step 3: Split the target variable y using the same indices
+y_train = y[train_indices]
+y_test = y[test_indices]
+
 #%%
 train_latent_space_left = np.zeros((train_data_left.shape[0], 32, 64, train_data_left.shape[-1]), dtype=np.float32)
 train_latent_space_right = np.zeros((train_data_right.shape[0], 32, 64, train_data_left.shape[-1]), dtype=np.float32)
@@ -102,9 +118,26 @@ tr_lsp_lft = train_latent_space_left.reshape(train_latent_space_left.shape[0], -
 tr_lsp_rght = train_latent_space_right.reshape(train_latent_space_right.shape[0], -1)
 
 tr_lsp = np.concatenate ((tr_lsp_lft, tr_lsp_rght), axis=1)
-
-print (tr_lsp_lft.shape)
-print (tr_lsp_rght.shape)
-print (tr_lsp.shape)
 # %%
-# Falta el test. Falta la regresion final.
+# Falta la regresion final.
+test_latent_space_left = np.zeros((test_data_left.shape[0], 32, 64, test_data_left.shape[-1]), dtype=np.float32)
+test_latent_space_right = np.zeros((test_data_right.shape[0], 32, 64, test_data_left.shape[-1]), dtype=np.float32)
+
+for i in range (test_data_left.shape[-1]):
+    print (f"Network number {1+i}")
+    lsp_left  = extract_latent_space(autoencoders_left[i], test_data_left[:,:,:,i], DEVICE)
+    lsp_right = extract_latent_space(autoencoders_right[i],test_data_right[:,:,:,i], DEVICE)
+
+    test_latent_space_left[:, :, :, i]  = lsp_left
+    test_latent_space_right[:, :, :, i] = lsp_right
+# %%
+model = Ridge()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+scores_ = np.full((n_scores,), np.nan)
+for c in range(n_scores):
+    r, _ = pearsonr(y_pred[:, c], y_test[:, c])
+    scores_[c] = r
+#%%
+tr_lsp.shape
+# %%
