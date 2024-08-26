@@ -9,10 +9,6 @@ from sklearn.linear_model import Ridge
 from sklearn.model_selection import train_test_split
 from scipy.stats.mstats import pearsonr
 import numpy as np
-import matplotlib.pyplot as plt
-
-import seaborn as sns
-import pandas as pd
 
 from model import Autoencoder, initialize_model, train_autoencoder, extract_latent_space
 from metrics import test_autoencoder
@@ -120,13 +116,13 @@ tr_lsp_rght = train_latent_space_right.reshape(train_latent_space_right.shape[0]
 tr_lsp = np.concatenate ((tr_lsp_lft, tr_lsp_rght), axis=1)
 # %%
 # Falta la regresion final.
-test_latent_space_left = np.zeros((test_data_left.shape[0], 32, 64, test_data_left.shape[-1]), dtype=np.float32)
-test_latent_space_right = np.zeros((test_data_right.shape[0], 32, 64, test_data_left.shape[-1]), dtype=np.float32)
+test_latent_space_left = np.zeros((test_data_left.shape[0], 32, 64,   test_data_left.shape[-1]), dtype=np.float32)
+test_latent_space_right = np.zeros((test_data_right.shape[0], 32, 64, test_data_right.shape[-1]), dtype=np.float32)
 
 for i in range (test_data_left.shape[-1]):
     print (f"Network number {1+i}")
-    lsp_left  = extract_latent_space(autoencoders_left[i], test_data_left[:,:,:,i], DEVICE)
-    lsp_right = extract_latent_space(autoencoders_right[i],test_data_right[:,:,:,i], DEVICE)
+    lsp_left  = extract_latent_space(autoencoders_left[i],  test_data_left[:,:,:,i], DEVICE)
+    lsp_right = extract_latent_space(autoencoders_right[i], test_data_right[:,:,:,i], DEVICE)
 
     test_latent_space_left[:, :, :, i]  = lsp_left
     test_latent_space_right[:, :, :, i] = lsp_right
