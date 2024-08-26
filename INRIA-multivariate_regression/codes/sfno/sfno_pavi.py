@@ -2,7 +2,7 @@
 import os
 import torch
 from data_processing import dataset_preprocessing, data_with_mask
-from sph_functions import interpolation_to_grid, hemisphere_to_spherical, spherical_to_hemisphere
+from sph_functions import interpolation_to_grid, hemisphere_to_spherical
 from plots_pavi import plot_sphere
 
 from sklearn.linear_model import Ridge
@@ -11,7 +11,6 @@ from scipy.stats.mstats import pearsonr
 import numpy as np
 
 from model import Autoencoder, initialize_model, train_autoencoder, extract_latent_space
-from metrics import test_autoencoder
 
 DIR = r'C:\Github\pavi_data'
 
@@ -22,7 +21,7 @@ n_job = 44
 
 
 net_number = None
-sh_orders = 4
+sh_orders = 80
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -67,6 +66,7 @@ if isinstance(net_number, int):
 print("New shape:")
 print(sph_data_left.shape)
 print(sph_data_right.shape)
+
 #%%
 autoencoders_left  = [Autoencoder(127, 254, kernel=30).to(DEVICE) for _ in range(sph_data_left.shape[-1])]
 autoencoders_right = [Autoencoder(127, 254, kernel=30).to(DEVICE) for _ in range(sph_data_left.shape[-1])]
@@ -116,7 +116,6 @@ tr_lsp_rght = train_latent_space_right.reshape(train_latent_space_right.shape[0]
 tr_lsp = np.concatenate ((tr_lsp_lft, tr_lsp_rght), axis=1)
 
 # %%
-# Falta la regresion final.
 test_latent_space_left = np.zeros((test_data_left.shape[0], 32, 64,   test_data_left.shape[-1]), dtype=np.float32)
 test_latent_space_right = np.zeros((test_data_right.shape[0], 32, 64, test_data_right.shape[-1]), dtype=np.float32)
 
@@ -127,14 +126,22 @@ for i in range (test_data_left.shape[-1]):
 
     test_latent_space_left[:, :, :, i]  = lsp_left
     test_latent_space_right[:, :, :, i] = lsp_right
+
+#%%
+tst_lsp_lft = test_latent_space_left.reshape(test_latent_space_left.shape[0], -1)
+tst_lsp_rght = test_latent_space_right.reshape(test_latent_space_right.shape[0], -1)
+
+tst_lsp = np.concatenate((tst_lsp_lft, tst_lsp_rght), axis=1)
 # %%
+# Regresion final.
 model = Ridge()
 model.fit(tr_lsp, y_train)
-y_pred = model.predict(X_test)
+y_pred = model.predict(tst_lsp)
 scores_ = np.full((n_scores,), np.nan)
 for c in range(n_scores):
     r, _ = pearsonr(y_pred[:, c], y_test[:, c])
     scores_[c] = r
 #%%
-tr_lsp.shape
+scores_.mean()
+
 # %%
