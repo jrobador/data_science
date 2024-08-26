@@ -114,6 +114,7 @@ tr_lsp_lft = train_latent_space_left.reshape(train_latent_space_left.shape[0], -
 tr_lsp_rght = train_latent_space_right.reshape(train_latent_space_right.shape[0], -1)
 
 tr_lsp = np.concatenate ((tr_lsp_lft, tr_lsp_rght), axis=1)
+
 # %%
 # Falta la regresion final.
 test_latent_space_left = np.zeros((test_data_left.shape[0], 32, 64,   test_data_left.shape[-1]), dtype=np.float32)
@@ -128,7 +129,7 @@ for i in range (test_data_left.shape[-1]):
     test_latent_space_right[:, :, :, i] = lsp_right
 # %%
 model = Ridge()
-model.fit(X_train, y_train)
+model.fit(tr_lsp, y_train)
 y_pred = model.predict(X_test)
 scores_ = np.full((n_scores,), np.nan)
 for c in range(n_scores):
