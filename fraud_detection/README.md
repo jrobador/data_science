@@ -630,7 +630,3 @@ The goal is to find a model complexity that achieves a good tradeoff between bia
 
 
 ## Conclusion
-
-[Tenemos dos partes del codigo. Explicarlo bien en las conclusiones]
-[Explicar los resultados bien. Ver si el flujo toma el test aparte]
-[Comparar resultados con RAPIDS. CV Metrics y con Train-Test Split]
