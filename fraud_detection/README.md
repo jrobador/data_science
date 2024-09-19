@@ -4,9 +4,18 @@
 
 Create predictive models to accurately detect whether a transaction is normal or fraudulent. The objectives include understanding the data distribution, creating a balanced sub-dataframe of fraud and non-fraud transactions, determining and evaluating various classifiers for accuracy, developing a neural network to compare its accuracy against the best classifier, and understanding common mistakes associated with imbalanced datasets.
 
+### Goals
+
+- Data Collection and Cleaning: Gathering and preprocessing transactional data to ensure data quality and consistency.
+- Exploratory Data Analysis (EDA): Conducting EDA to identify important patterns, trends, and key characteristics within the dataset.
+- Feature Engineering: Creating and selecting features to enhance the accuracy and performance of predictive models.
+- Model Training and Evaluation: Training and evaluating classification models, such as Random Forest and Gradient Boosting, to ensure model effectiveness.
+- Anomaly Detection Techniques: Implementing techniques to identify and address anomalies in the dataset.
+
 ### Challenges and its solutions
 
-1. Imbalanced datasets are those where there is a severe skew in the class distribution, such as 1:100 or 1:1000 examples in the minority class to the majority class. This bias in the training dataset can influence many machine learning algorithms, leading some to ignore the minority class entirely. This is a problem as it is typically the minority class on which predictions are most important. One approach to addressing the problem of class imbalance is to randomly resample the training dataset. The two main approaches to randomly resampling an imbalanced dataset are to delete examples from the majority class, called **undersampling**, and to duplicate examples from the minority class, called **oversampling**. Both techniques can be used for two-class (binary) classification problems and multi-class classification problems with one or more majority or minority classes. Importantly, the change to the class distribution is only applied to the training dataset. The intent is to influence the fit of the models. The resampling is not applied to the test or holdout dataset used to evaluate the performance of a model. (See more in ![Fundamentals](https://github.com/jrobador/data_science/tree/main/MIT%2BSCIKITLEARN-fundamentals/imbalanced_datasets)).
+- Imbalanced datasets are those where there is a severe skew in the class distribution, such as 1:100 or 1:1000 examples in the minority class to the majority class. This bias in the training dataset can influence many machine learning algorithms, leading some to ignore the minority class entirely. This is a problem as it is typically the minority class on which predictions are most important. One approach to addressing the problem of class imbalance is to randomly resample the training dataset. The two main approaches to randomly resampling an imbalanced dataset are to delete examples from the majority class, called **undersampling**, and to duplicate examples from the minority class, called **oversampling**. Both techniques can be used for two-class (binary) classification problems and multi-class classification problems with one or more majority or minority classes. Importantly, the change to the class distribution is only applied to the training dataset. The intent is to influence the fit of the models. The resampling is not applied to the test or holdout dataset used to evaluate the performance of a model. (See more in ![Fundamentals](https://github.com/jrobador/data_science/tree/main/MIT%2BSCIKITLEARN-fundamentals/imbalanced_datasets)).
+
 
 ### Dataset example
 
@@ -162,7 +171,7 @@ Create predictive models to accurately detect whether a transaction is normal or
 </table>
 </div>
 
-### Dataset information
+## Dataset information
 
 - 284807 rows x 31 columns
 - The mean of transaction amount is 88.34961925093133. But since it is an imbalanced data, using the average of all values is not the best information about beacuse it is sensitive to ouliers. Median is the best central tendency measure, giving a value of 22.
@@ -246,9 +255,28 @@ Examples of Normal Distribution:
 
 Since not all columns were standarized, we apply RobustScaler() because is less prone to outliers.
 
-### Splitting data
+## Splitting data
+Enfoque propuesto: 
+Separación previa en conjunto de entrenamiento y test:
 
-Before applying any under-sampling techniques, it’s crucial to separate the original dataframe. Although we will split the data during the implementation of Random Under-Sampling or Over-Sampling techniques, it is important to remember that we should test our models on the original testing set, not on the subset created by these techniques. The primary objective is to fit the model using the modified dataframes (that have been under-sampled or over-sampled) to help the model detect patterns, and then evaluate its performance on the untouched, original testing set.
+Se realiza un train_test_split inicial para asegurarse de que el conjunto de test no se vea afectado por el Subsampling u Oversampling.
+
+La idea es que cualquier muestreo (balanceo) solo se aplique al conjunto de entrenamiento, mientras que el conjunto de test permanece con su distribución original para evaluar el rendimiento de manera realista.
+
+Aplicar sampling solo al conjunto de entrenamiento:
+
+Las técnicas de Subsampling u Oversampling se aplican únicamente en el conjunto de entrenamiento (balanceando las clases).
+
+Evaluación en el conjunto de test original:
+
+El modelo es evaluado sobre el conjunto de test que quedó intacto, sin haber sido modificado por las técnicas de muestreo.
+Esto asegura que estés evaluando el modelo con un conjunto de datos que representa la realidad, donde las clases están desbalanceadas.
+
+
+Before applying any sampling technique, it’s crucial to separate the original dataframe. Although we will split the data during the implementation of Random Under-Sampling or Over-Sampling techniques, it is important to remember that we should test our models on the original testing set, not on the subset created by these techniques. The primary objective is to fit the model using the modified dataframes (that have been under-sampled or over-sampled) to help the model detect patterns, and then evaluate its performance on the untouched, original testing set.
+
+## Under-sampling method
+
 
 ## Correlation Matrices
 
@@ -426,13 +454,13 @@ Negative Correlation between features and class (Lower than -0.6):
 
 ## Anomaly Detection
 
-Inspecting the correlation boxplot we can see that there are a lot of negative outliers. We are going to remove them with IRM. I think also is possible to do the same with V11 vs Class Positive but we are not going to do it. The methodology is exaclty the same.
+Inspecting the correlation boxplot we can see that there are a lot of negative outliers. We are going to remove them with Interquartile Range Method (IRM). I think also is possible to do the same with V11 vs Class Positive but we are not going to do it. The methodology is exaclty the same.
 
 Outliers can have many causes, such as:
 
 - Measurement or input error.
 - Data corruption.
-- True outlier observation (e.g. Michael Jordan in basketball).
+- True outlier observation (e.g. Michael Jordan in basketball or Juan Roman Riquelme in free throws).
 
 Removing extreme outliers from features that have a high correlation with our classes could be crucial for several reasons:
 
@@ -450,7 +478,7 @@ However, this does not mean that the values identified are outliers and should b
 
 ## Dimensionality Reduction and Clustering
 
-This gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
+> Dimensionality reduction and clustering gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
 
 ### t-SNE
 
@@ -489,9 +517,6 @@ t-SNE (t-distributed Stochastic Neighbor Embedding) takes a high dimensional dat
 
    - This minimization is typically performed using gradient descent, iteratively adjusting the positions of points in the low-dimensional space to better match the high-dimensional similarities.
 
-
-
-> This gives us an indication that further predictive models will perform pretty well in separating fraud cases from non-fraud cases.
 
 ![T-SNE](./plots/tsne_3d.png)
 ![T-SNE](./plots/tsne_2d.png)
@@ -552,6 +577,9 @@ We will train and evaluate various classifiers from scikit-learn to assess their
 Particularly in high-dimensional spaces, data can more easily be separated linearly and the simplicity of classifiers such as naive Bayes and linear SVMs might lead to better generalization than is achieved by other classifiers.
 
 One crucial aspect to highlight is the use of the `average='weighted'` parameter. When calculating metrics such as precision, recall, or F1 Score, the macro average considers the performance of each class independently and then averages these values. This approach is akin to assessing how well the model performs for each category individually before determining the overall average performance across all categories. In contrast, a weighted average assigns more significance to certain classes based on their representation or importance within the dataset. This method ensures that the evaluation metric reflects the performance more accurately, especially in cases where class distributions are imbalanced. Essentially, it's like prioritizing the opinions of more knowledgeable or influential members in a group discussion, leading to a more nuanced and representative assessment of the model's effectiveness.
+
+!El enfoque que hacemos aca es de dos formas: La primera es sin la validacion cruzada, para tambien comparar con RAPIDS.
+El segundo, es con validación cruzada.
 
 ### Nearest Neighbors
 ### SVC

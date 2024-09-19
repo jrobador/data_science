@@ -36,11 +36,12 @@ df.head()
 df.describe()
 # %%
 # Check dataset information
+
 df_mean     = df["Amount"].mean()
 df_median   = df["Amount"].median()
 print (f"{df_mean=}")
 print (f"{df_median=}")
-print("Any NaN Value? {a}".format(a=df.isna().any().any()))
+print(f"Any NaN Value? {df.isna().any().any()}")
 
 #Dataframe shape
 print (f"{df.shape=}")
@@ -48,17 +49,17 @@ print (f"{df.shape=}")
 # Dataset is already categorized with fraudulent/non-fraudulent
 #How many are non-fraudulent?
 non_fraudulent = df['Class'].value_counts()[0]
-print (f"{non_fraudulent = }")
+print (f"{non_fraudulent=}")
 
 #And how many are fraudulent?
 fraudulent = df['Class'].value_counts()[1]
-print (f"{fraudulent = }")
+print (f"{fraudulent=}")
 
-print('No Frauds:', round(df['Class'].value_counts()[0]/len(df), 5))
-print('Frauds:', round(df['Class'].value_counts()[1]/len(df), 5))
+print('No Frauds=', round(df['Class'].value_counts()[0]/len(df), 5))
+print('Frauds=', round(df['Class'].value_counts()[1]/len(df), 5))
 
 # %%
-# Let's check amount vs time distribution 
+# Some useful plots for business practices
 
 amount_val = df['Amount'].values
 time_val = df['Time'].values
@@ -96,7 +97,7 @@ ax[1].grid(True, linestyle='--', alpha=0.7)
 
 plt.savefig("./plots/distribution_plots.png")
 plt.show()
-#%%
+
 # Plot the normal distribution for 'Amount' and 'Time'
 fig, ax = plt.subplots(1, 2, figsize=(18, 4))
 # Amount distribution
@@ -115,58 +116,50 @@ ax[1].set_title('Normal Distribution of Transaction Time', fontsize=14)
 plt.savefig("./plots/normal_distributions.png")
 plt.show()
 # %%
-# Scaling Time and amount
+# Standarization of data
+
 df.insert(0, 'scaled_amount', RobustScaler().fit_transform(df['Amount'].values.reshape(-1,1)))
 df.insert(1, 'scaled_time',   RobustScaler().fit_transform(df['Time'].values.reshape(-1,1)))
 
 df.drop(['Time','Amount'], axis=1, inplace=True)
 
-print (df.columns)
-
-# %%
 df.describe()
 # %%
-# Splitting original DataFrame
+# Splitting data
 
 X = df.drop('Class', axis=1)
 y = df['Class']
 
-
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=37
-)
+    X, y, test_size=0.2, random_state=37, stratify=y)
 
-# %%
-X.min()
-#%%
-X.loc[274771]
+print (f"length of X_train:{len(X_train)}, length of X_test:{len(X_test)}")
+
 #%%
 # Subsampling
+
 # Approach: Take randomly the same proportion of non-fraud transaction to avoid wrong correlations.
 # Why undersampling? Because our dataset is large enough and we can do it.
 # Just taking the same amount for each class.
 
-df = df.sample(frac=1)
+print ("---Subsampling Approach---")
 
-nf = df['Class'].value_counts()[0]
-f = df['Class'].value_counts()[1]
+df_train = pd.concat([X_train, y_train], axis=1)
+
 print ("Before subsampling:")
-print ("Non-Fraud Length:{a}, Fraud Length:{b}".format(a=nf, b=f))
+print (f"Non-Fraud Length:{df_train['Class'].value_counts()[0]}, Fraud Length:{df_train['Class'].value_counts()[1]}")
 
-fraud_df = df.loc[df['Class'] == 1]
-non_fraud_df = df.loc[df['Class'] == 0][:len(fraud_df)]
+fraud_df_train = df_train.loc[df_train['Class'] == 1]
+non_fraud_df_train = df_train.loc[df_train['Class'] == 0][:len(fraud_df_train)]
+
 print ("After subsampling:")
-print ("Non-Fraud Length:{a}, Fraud Length:{b}".format(b=len(fraud_df), a=len(non_fraud_df)))
+print (f"Non-Fraud Length:{len(non_fraud_df_train)}, Fraud Length:{len(fraud_df_train)}")
 
-
-normal_distributed_df = pd.concat([fraud_df, non_fraud_df])
-
-# Shuffle dataframe rows
-new_df = normal_distributed_df.sample(frac=1, random_state=37)
+new_df_train = pd.concat([fraud_df_train, non_fraud_df_train]).sample(frac=1, random_state=37)
 
 # %%
 plt.figure(figsize=(24,20))
-sub_sample_corr = new_df.corr()
+sub_sample_corr = new_df_train.corr(method='pearson', min_periods=1, numeric_only=False)
 sns.heatmap(sub_sample_corr, cmap='coolwarm_r', annot_kws={'size':20})
 plt.title('SubSample Correlation Matrix', fontsize=14)
 plt.savefig("./plots/corr_matrices.png")
@@ -194,13 +187,13 @@ for feature in sub_sample_corr.columns:
 f, axes = plt.subplots(ncols=3, figsize=(15,4))
 
 # Negative Correlations with our Class (The lower our feature value the more likely it will be a fraud transaction)
-sns.boxplot(x="Class", y="V10", data=new_df, ax=axes[0])
+sns.boxplot(x="Class", y="V10", data=new_df_train, ax=axes[0])
 axes[0].set_title('V10 vs Class Negative Correlation')
 
-sns.boxplot(x="Class", y="V12", data=new_df, ax=axes[1])
+sns.boxplot(x="Class", y="V12", data=new_df_train, ax=axes[1])
 axes[1].set_title('V12 vs Class Negative Correlation')
 
-sns.boxplot(x="Class", y="V14", data=new_df, ax=axes[2])
+sns.boxplot(x="Class", y="V14", data=new_df_train, ax=axes[2])
 axes[2].set_title('V14 vs Class Negative Correlation')
 
 plt.savefig("./plots/neg_corr.png")
@@ -210,10 +203,10 @@ f, axes = plt.subplots(ncols=2, figsize=(10,4))
 
 # Positive correlations (The higher the feature the probability increases that it will be a fraud transaction)
 
-sns.boxplot(x="Class", y="V4", data=new_df, ax=axes[0])
+sns.boxplot(x="Class", y="V4", data=new_df_train, ax=axes[0])
 axes[0].set_title('V4 vs Class Positive Correlation')
 
-sns.boxplot(x="Class", y="V11", data=new_df, ax=axes[1])
+sns.boxplot(x="Class", y="V11", data=new_df_train, ax=axes[1])
 axes[1].set_title('V11 vs Class Positive Correlation')
 
 plt.savefig("./plots/pos_corr.png")
@@ -224,7 +217,7 @@ plt.show()
 f, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(30, 8))
 
 # V14 Distribution (Fraud Transactions)
-v14_fraud_dist = new_df['V14'].loc[new_df['Class'] == 1].values
+v14_fraud_dist = new_df_train['V14'].loc[new_df_train['Class'] == 1].values
 sns.histplot(v14_fraud_dist, ax=ax1, color='r', kde=True, stat="density", label='KDE')
 x_vals = np.linspace(min(v14_fraud_dist), max(v14_fraud_dist), 100)
 ax1.plot(x_vals, norm.pdf(x_vals, np.mean(v14_fraud_dist), np.std(v14_fraud_dist)), color='orange', linestyle='--', linewidth=1.5, label='Normal Distribution Fit')
@@ -232,7 +225,7 @@ ax1.set_title('V14 Distribution \n (Fraud Transactions)', fontsize=14)
 ax1.legend()
 
 # V12 Distribution (Fraud Transactions)
-v12_fraud_dist = new_df['V12'].loc[new_df['Class'] == 1].values
+v12_fraud_dist = new_df_train['V12'].loc[new_df_train['Class'] == 1].values
 sns.histplot(v12_fraud_dist, ax=ax2, color='r', kde=True, stat="density", label='KDE')
 x_vals = np.linspace(min(v12_fraud_dist), max(v12_fraud_dist), 100)
 ax2.plot(x_vals, norm.pdf(x_vals, np.mean(v12_fraud_dist), np.std(v12_fraud_dist)), color='orange', linestyle='--', linewidth=1.5, label='Normal Distribution Fit')
@@ -240,7 +233,7 @@ ax2.set_title('V12 Distribution \n (Fraud Transactions)', fontsize=14)
 ax2.legend()
 
 # V10 Distribution (Fraud Transactions)
-v10_fraud_dist = new_df['V10'].loc[new_df['Class'] == 1].values
+v10_fraud_dist = new_df_train['V10'].loc[new_df_train['Class'] == 1].values
 sns.histplot(v10_fraud_dist, ax=ax3, color='r', kde=True, stat="density", label='KDE')
 x_vals = np.linspace(min(v10_fraud_dist), max(v10_fraud_dist), 100)
 ax3.plot(x_vals, norm.pdf(x_vals, np.mean(v10_fraud_dist), np.std(v10_fraud_dist)), color='orange', linestyle='--', linewidth=1.5, label='Normal Distribution Fit')
@@ -253,11 +246,11 @@ plt.show()
 # Anomaly elimination
 
 # V14 removing outliers from fraud transactions
-v14_fraud = new_df['V14'].loc[new_df['Class'] == 1].values
+v14_fraud = new_df_train['V14'].loc[new_df_train['Class'] == 1].values
 q25, q75 = np.percentile(v14_fraud, 25), np.percentile(v14_fraud, 75)
 print('Quartile 25 for V14: {} | Quartile 75 for V14: {}'.format(q25, q75))
 v14_iqr = q75 - q25
-print('iqr: {}'.format(v14_iqr))
+print(f"{v14_iqr=}")
 
 v14_cut_off = v14_iqr * 1.5
 v14_lower, v14_upper = q25 - v14_cut_off, q75 + v14_cut_off
@@ -269,48 +262,46 @@ outliers = [x for x in v14_fraud if x < v14_lower or x > v14_upper]
 print('V14 outliers:{}'.format(outliers))
 print('Feature V14 Outliers for Fraud Cases: {}'.format(len(outliers)))
 
-new_df = new_df.drop(new_df[(new_df['V14'] > v14_upper) | (new_df['V14'] < v14_lower)].index)
-print('Number of Instances after outliers removal: {}'.format(len(new_df)))
-
-
+new_df_train = new_df_train.drop(new_df_train[(new_df_train['V14'] > v14_upper) | (new_df_train['V14'] < v14_lower)].index)
+print('Number of Instances after outliers removal: {}'.format(len(new_df_train)))
 print('----' * 10)
 
 # V12 removing outliers from fraud transactions
-v12_fraud = new_df['V12'].loc[new_df['Class'] == 1].values
+v12_fraud = new_df_train['V12'].loc[new_df_train['Class'] == 1].values
 q25, q75 = np.percentile(v12_fraud, 25), np.percentile(v12_fraud, 75)
 v12_iqr = q75 - q25
+print(f"{v12_iqr=}")
 
 v12_cut_off = v12_iqr * 1.5
 v12_lower, v12_upper = q25 - v12_cut_off, q75 + v12_cut_off
 print('V12 Lower: {}'.format(v12_lower))
 print('V12 Upper: {}'.format(v12_upper))
+
 outliers = [x for x in v12_fraud if x < v12_lower or x > v12_upper]
 print('V12 outliers: {}'.format(outliers))
 print('Feature V12 Outliers for Fraud Cases: {}'.format(len(outliers)))
 
-new_df = new_df.drop(new_df[(new_df['V12'] > v12_upper) | (new_df['V12'] < v12_lower)].index)
-print('Number of Instances after outliers removal: {}'.format(len(new_df)))
+new_df_train = new_df_train.drop(new_df_train[(new_df_train['V12'] > v12_upper) | (new_df_train['V12'] < v12_lower)].index)
+print('Number of Instances after outliers removal: {}'.format(len(new_df_train)))
 print('----' * 10)
 
 
 # V10 removing outliers from fraud transactions
-v10_fraud = new_df['V10'].loc[new_df['Class'] == 1].values
+v10_fraud = new_df_train['V10'].loc[new_df_train['Class'] == 1].values
 q25, q75 = np.percentile(v10_fraud, 25), np.percentile(v10_fraud, 75)
 v10_iqr = q75 - q25
+print(f"{v10_iqr=}")
 
 v10_cut_off = v10_iqr * 1.5
 v10_lower, v10_upper = q25 - v10_cut_off, q75 + v10_cut_off
 print('V10 Lower: {}'.format(v10_lower))
 print('V10 Upper: {}'.format(v10_upper))
 outliers = [x for x in v10_fraud if x < v10_lower or x > v10_upper]
-print('Feature V10 Outliers for Fraud Cases: {}'.format(len(outliers)))
 print('V10 outliers: {}'.format(outliers))
+print('Feature V10 Outliers for Fraud Cases: {}'.format(len(outliers)))
 
-new_df = new_df.drop(new_df[(new_df['V10'] > v10_upper) | (new_df['V10'] < v10_lower)].index)
-
-print('Number of Instances after outliers removal: {}'.format(len(new_df)))
-# %%
-new_df.head()
+new_df_train = new_df_train.drop(new_df_train[(new_df_train['V10'] > v10_upper) | (new_df_train['V10'] < v10_lower)].index)
+print('Number of Instances after outliers removal: {}'.format(len(new_df_train)))
 
 # %%
 #Botplox without outliers
@@ -319,31 +310,31 @@ f,(ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,6))
 
 # Boxplots with outliers removed
 # Feature V14
-sns.boxplot(x="Class", y="V14", data=new_df,ax=ax1)
+sns.boxplot(x="Class", y="V14", data=new_df_train,ax=ax1)
 ax1.set_title("V14 Feature \n Reduction of outliers", fontsize=14)
 
 # Feature 12
-sns.boxplot(x="Class", y="V12", data=new_df, ax=ax2)
+sns.boxplot(x="Class", y="V12", data=new_df_train, ax=ax2)
 ax2.set_title("V12 Feature \n Reduction of outliers", fontsize=14)
 
 # Feature V10
-sns.boxplot(x="Class", y="V10", data=new_df, ax=ax3)
+sns.boxplot(x="Class", y="V10", data=new_df_train, ax=ax3)
 ax3.set_title("V10 Feature \n Reduction of outliers", fontsize=14)
 
 
 plt.savefig("./plots/neg_corr_nools.png")
 plt.show() 
 # %%
-# T-SNE for 3D plot
+# Dimensionality Reduction and Clustering - T-SNE for 3D plot
 
-data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform((new_df.drop('Class', axis=1)))
+data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform((new_df_train.drop('Class', axis=1)))
 # %%
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot(projection="3d")
 
 
 sc0, sc1, sc2 = data_embedded_TSNE[:,0], data_embedded_TSNE[:,1], data_embedded_TSNE[:,2]
-y = new_df['Class']
+y = new_df_train['Class']
 
 ax.scatter(data_embedded_TSNE[(y == 0),0], data_embedded_TSNE[(y == 0),1], data_embedded_TSNE[(y == 0),2], c='yellow', label="Non Fraud")
 ax.scatter(data_embedded_TSNE[(y == 1),0], data_embedded_TSNE[(y == 1),1], data_embedded_TSNE[(y == 1),2], c='blue', label="Fraud")
@@ -357,15 +348,15 @@ plt.savefig("./plots/tsne_3d.png")
 plt.show() 
 
 # %%
-# T-SNE for 2D plot
+# Dimensionality Reduction and Clustering - T-SNE for 2D plot
 
-data_embedded_TSNE = TSNE(n_components=2, random_state=37).fit_transform((new_df.drop('Class', axis=1)))
+data_embedded_TSNE = TSNE(n_components=2, random_state=37).fit_transform((new_df_train.drop('Class', axis=1)))
 # %%
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot()
 
 
-y = new_df['Class']
+y = new_df_train['Class']
 
 ax.scatter(data_embedded_TSNE[(y == 0),0], data_embedded_TSNE[(y == 0),1], c='yellow',  label="Non Fraud")
 ax.scatter(data_embedded_TSNE[(y == 1),0], data_embedded_TSNE[(y == 1),1], c='blue',    label="Fraud")
@@ -380,36 +371,39 @@ plt.show()
 
 
 #%%
+# Dimensionality Reduction and Clustering - PCA with 90% of Variability
+
 pca_module_90 = PCA(n_components=0.9, random_state=37)
-data_embedded_PCA = pca_module_90.fit_transform((new_df.drop('Class', axis=1)))
+data_embedded_PCA_90 = pca_module_90.fit_transform((new_df_train.drop('Class', axis=1)))
+
+fig = plt.figure(facecolor="white", constrained_layout=True)
+ax = fig.add_subplot()
+plt.scatter(data_embedded_PCA_90[(y == 1),0], data_embedded_PCA_90[(y == 1),1],c='yellow', label="Fraud")
+plt.scatter(data_embedded_PCA_90[(y == 0),0], data_embedded_PCA_90[(y == 0),1],c='blue', label="Non-Fraud")
+
+plt.legend()
+ax.grid(True)
+plt.show() 
 
 # %%
-data_embedded_PCA.shape
-pca_module_90.explained_variance_ratio_
+# Dimensionality Reduction and Clustering - PCA with 2 components
 
-pca_module_90.explained_variance_ratio_.sum()
-
-# %%
 pca_module_2 = PCA(n_components=2, random_state=37)
-data_embedded_PCA = pca_module_2.fit_transform((new_df.drop('Class', axis=1)))
-# %%
-pca_module_2.explained_variance_ratio_.sum()
-
+data_embedded_PCA_2 = pca_module_2.fit_transform((new_df_train.drop('Class', axis=1)))
 # %%
 
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot()
-plt.scatter(data_embedded_PCA[(y == 1),0], data_embedded_PCA[(y == 1),1],c='yellow', label="Fraud")
-plt.scatter(data_embedded_PCA[(y == 0),0], data_embedded_PCA[(y == 0),1],c='blue', label="Non-Fraud")
+plt.scatter(data_embedded_PCA_2[(y == 1),0], data_embedded_PCA_2[(y == 1),1],c='yellow', label="Fraud")
+plt.scatter(data_embedded_PCA_2[(y == 0),0], data_embedded_PCA_2[(y == 0),1],c='blue', label="Non-Fraud")
 
 plt.legend()
 ax.grid(True)
 
 plt.savefig("./plots/pca.png")
 plt.show() 
-
 # %%
-### Defining classifiers
+### Classification task (is it a fraud case or not?)
 
 names = [
     "Nearest Neighbors", "SVC",
@@ -425,13 +419,18 @@ classifiers = [
     LogisticRegression(),
     GaussianNB()
 ]
+names_test = [
+    "Nearest Neighbors", "SVC",
+    "Random Forest", "Logistic Regression",
+    "GaussianNB"
+]
 clf_test = [
     KNeighborsClassifier(3),
     LogisticRegression(),
     GaussianNB()
 ]
 #%%
-# Evaluate the classifier. CPU Approach
+# Evaluate the classifier. CPU Approach with train_test_split only
 def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
     start_time = datetime.now()
     clf.fit(X_train, y_train)
@@ -448,7 +447,7 @@ def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
 #%%
 # Evaluate each classifier
 results = []
-for name, clf in zip(names, classifiers):
+for name, clf in zip(names_test, clf_test):
     print(f"Running for {name}")
     accuracy, precision, recall, f1, duration = evaluate_classifier(clf, X_train, y_train, X_test, y_test)
     results.append((name, accuracy, precision, recall, f1, duration))
@@ -521,16 +520,8 @@ for i, (train_index, test_index) in enumerate(sss.split(X, y)):
 # %%
 results_cv_np = np.array(results_cv)
 # %%
-## (Classifier, CV folds, Metrics)
-results_cv_np.shape
-# %%
-results_cv_np[0,:]
-# %%
 # Take the mean for folds.
 cv_metrics = np.mean(results_cv_np, axis=1, keepdims=True)
-
-# %%
-cv_metrics.shape
 #%% 
 with open('sk_clasf_CV_metrics.txt', 'w') as f:
     f.write("Metrics for Statisfied K-Fold CV - Sci-Kit Learn Classifiers\n")
