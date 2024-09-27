@@ -430,79 +430,11 @@ clf_test = [
     GaussianNB()
 ]
 #%%
-# Evaluate the classifier. CPU Approach with train_test_split only
-def evaluate_classifier(clf, X_train, y_train, X_test, y_test):
-    start_time = datetime.now()
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average='weighted')
-    recall = recall_score(y_test, y_pred, average='weighted')
-    f1 = f1_score(y_test, y_pred, average='weighted')
-
-    end_time = datetime.now()
-    duration = end_time - start_time
-    return accuracy, precision, recall, f1, duration
-
-#%%
-# Evaluate each classifier
-results = []
-for name, clf in zip(names_test, clf_test):
-    print(f"Running for {name}")
-    accuracy, precision, recall, f1, duration = evaluate_classifier(clf, X_train, y_train, X_test, y_test)
-    results.append((name, accuracy, precision, recall, f1, duration))
-
-# Print and save results
-with open('sk_clasf_metrics.txt', 'w') as f:
-    f.write("Metrics for Sci-Kit Learn Classifiers\n")
-    f.write("=" * 40 + "\n\n")
-    for name, accuracy, precision, recall, f1, duration in results:
-        output_str = (f"{name}:\n"
-                      f"  Accuracy:  {accuracy:.4f}\n"
-                      f"  Precision: {precision:.4f}\n"
-                      f"  Recall:    {recall:.4f}\n"
-                      f"  F1 Score:  {f1:.4f}\n"
-                      f"  Duration:  {duration}\n"
-                      f"{'-' * 30}\n")
-        print(output_str)
-        f.write(output_str)
-#%%
-# KFold implementation
+# CV implementation
 
 sss = StratifiedKFold(n_splits=5, random_state=37, shuffle=True)
 
-#%%
-X = df.drop('Class', axis=1)
-y = df['Class']
-
-#%%
-# Cross-Validation inspection
-
-for i, (train_index, test_index) in enumerate(sss.split(X, y)):
-    print (i)
-    print("Train:", len(train_index), "Test:", len(test_index))
-    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
-    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
-
-# Converts the pandas DataFrame and Series objects to NumPy arrays. 
-original_Xtrain = original_Xtrain.values
-original_Xtest = original_Xtest.values
-original_ytrain = original_ytrain.values
-original_ytest = original_ytest.values
-
-# See if both the train and test label distribution are similarly distributed
-train_unique_label, train_counts_label = np.unique(original_ytrain, return_counts=True)
-test_unique_label, test_counts_label = np.unique(original_ytest, return_counts=True)
-
-# Suppose original_ytrain is [0, 1, 0, 1, 0]:
-# train_unique_label will be [0, 1] (the unique labels).
-# train_counts_label will be [3, 2] (3 instances of label 0 and 2 instances of label 1).
-print('-' * 100)
-
-print('Label Distributions:')
-print("For training labels (Fraud, no Fraud)" + str(train_counts_label/ len(original_ytrain)))
-print("For testing labels (Fraud, no Fraud) " + str(test_counts_label / len(original_ytest )))
-
+fold_metrics = []
 
 # %%
 # Cross-Validation classifiers - from scratch code
@@ -553,15 +485,18 @@ scoring_methods = {
 # Implementation
 results_cv_sk = [[] for _ in range(len(classifiers))]
 
-for clf in classifiers:
+for i, clf in enumerate(clf_test):
     print (clf.__class__.__name__)
+
     for scoring_name, scoring in scoring_methods.items():
         print(scoring_name)
+
         scores = cross_val_score(clf, X, y,
                                  cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring)
-        results_cv_sk.append(scores)
+        results_cv_sk[i].append(scores)
 
-results_cv_sk = np.array(results_cv_sk).T
+results_cv_sk = np.array([np.array(scores).T for scores in results_cv_sk])
+
 print(results_cv_sk)
 
 # %% 
