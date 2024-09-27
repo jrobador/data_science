@@ -434,41 +434,7 @@ clf_test = [
 
 sss = StratifiedKFold(n_splits=5, random_state=37, shuffle=True)
 
-fold_metrics = []
-
-# %%
-# Cross-Validation classifiers - from scratch code
-results_cv = [[] for _ in range(len(classifiers))]
-for i, (train_index, test_index) in enumerate(sss.split(X, y)):
-    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
-    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
-
-    for j, clf_cv in enumerate(classifiers):
-        print (f"Classifier name {clf_cv.__class__.__name__}  CV number {i} J variable {j}")
-        accuracy, precision, recall, f1, duration = evaluate_classifier(clf_cv, original_Xtrain, original_ytrain,
-                                                              original_Xtest, original_ytest)
-        results_cv[j].append([accuracy, precision, recall, f1, duration]) 
-
-# %%
-results_cv_np = np.array(results_cv)
-# %%
-# Take the mean for folds.
-cv_metrics = np.mean(results_cv_np, axis=1, keepdims=True)
-#%% 
-with open('sk_clasf_CV_metrics.txt', 'w') as f:
-    f.write("Metrics for Statisfied K-Fold CV - Sci-Kit Learn Classifiers\n")
-    f.write("=" * 40 + "\n\n")
-    for i, name in enumerate (names):
-        accuracy, precision, recall, f1, duration = cv_metrics[i,0]
-        output_str = (f"{name}:\n"          # Innecesario hacerlo asi...
-                      f"  Accuracy:  {accuracy:.4f}\n"
-                      f"  Precision: {precision:.4f}\n"
-                      f"  Recall:    {recall:.4f}\n"
-                      f"  F1 Score:  {f1:.4f}\n"
-                      f"  Duration:  {duration}\n"
-                      f"{'-' * 30}\n")
-        f.write(output_str)
-
+fold_metrics = [
 # %%
 # Cross-Validation classifiers - built-in metric functions
 precision_scorer = make_scorer(precision_score, average='weighted')
