@@ -1,23 +1,40 @@
 # Fraud Detection in Financial Transactions
 
-## Main idea
+## Project Overview
 
-Create predictive models to accurately detect whether a transaction is normal or fraudulent. The objectives include understanding the data distribution, creating a balanced sub-dataframe of fraud and non-fraud transactions, determining and evaluating various classifiers for accuracy, developing a neural network to compare its accuracy against the best classifier, and understanding common mistakes associated with imbalanced datasets.
+### Objective 
 
-### Goals
+Develop predictive models to identify whether a transaction is fraudulent or legitimate, with a focus on balancing recall and precision.
 
-- Data Collection and Cleaning: Gathering and preprocessing transactional data to ensure data quality and consistency.
-- Exploratory Data Analysis (EDA): Conducting EDA to identify important patterns, trends, and key characteristics within the dataset.
-- Feature Engineering: Creating and selecting features to enhance the accuracy and performance of predictive models.
-- Model Training and Evaluation: Training and evaluating classification models, such as Random Forest and Gradient Boosting, to ensure model effectiveness.
-- Anomaly Detection Techniques: Implementing techniques to identify and address anomalies in the dataset.
+### Steps and Process:
 
-### Challenges and its solutions
+1. **Data Exploration and Preprocessing:** Analyzed the imbalanced dataset using Exploratory Data Analysis (EDA) to assess the need for cleaning and preprocessing. Visualized data distributions to understand feature importance and correlations with fraud.
+
+2. **Class Imbalance Handling:** Created a balanced sub-dataset using sampling techniques to better explore relationships between features and fraudulent transactions.
+
+3. **Feature Selection and Outlier Removal:** Identified key features and removed outliers to enhance model performance using feature engineering.
+
+4. **Dimensionality Reduction:** Applied techniques like PCA and T-SNE to reduce the feature space and simplify the models while retaining predictive power. This helped to explore whether reducing the feature space could maintain the predictive power while simplifying the model.
+
+5. **Model Development and Evaluation:** Multiple classifiers were evaluated across different metrics, aligning model selection with the specific business requirements (e.g., balancing between high recall for fraud detection and precision to minimize false positives). Metrics such as precision, recall, and the F1 score were closely monitored to ensure that the models perform well under real-world conditions.
+
+### Model Performance:
+
+- **Model 1:**
+This model was optimized for both precision and recall, striking a balance between detecting fraud and minimizing false alarms. It achieved an 84% recall on the test set, identifying 82 out of 98 fraudulent transactions out of 56,962 total transactions. This model is well-suited for environments where a moderate trade-off between recall and precision is acceptable.
+
+- **Model 2:**
+A more aggressive threshold was applied in this model, prioritizing recall at the expense of precision. It achieved a 91% recall on the test set, detecting 88 out of 98 fraudulent transactions. However, the model experienced a decrease in precision, making it ideal for use cases where maximizing fraud detection is paramount, even if it means more false positives.
+
+---
+
+## Challenges and its solutions
 
 - Imbalanced datasets are those where there is a severe skew in the class distribution, such as 1:100 or 1:1000 examples in the minority class to the majority class. This bias in the training dataset can influence many machine learning algorithms, leading some to ignore the minority class entirely. This is a problem as it is typically the minority class on which predictions are most important. One approach to addressing the problem of class imbalance is to randomly resample the training dataset. The two main approaches to randomly resampling an imbalanced dataset are to delete examples from the majority class, called **undersampling**, and to duplicate examples from the minority class, called **oversampling**. Both techniques can be used for two-class (binary) classification problems and multi-class classification problems with one or more majority or minority classes. Importantly, the change to the class distribution is only applied to the training dataset. The intent is to influence the fit of the models. The resampling is not applied to the test or holdout dataset used to evaluate the performance of a model. (See more in ![Fundamentals](https://github.com/jrobador/data_science/tree/main/MIT%2BSCIKITLEARN-fundamentals/imbalanced_datasets)).
 
+## Dataset overview
 
-### Dataset example
+The dataset contains 284,807 rows and 31 columns, with no missing values. The features include V1 to V28, time, amount, and a target column labeled "class," where 0 represents a non-fraudulent transaction (99.83%) and 1 indicates a fraudulent transaction (0.173%). The mean transaction amount is 88.35, but due to the imbalanced nature of the data and sensitivity to outliers, the median value of 22 provides a more accurate central tendency. The table below shows the first five samples of the dataset.
 
 <table border="1" class="dataframe">
   <thead>
@@ -171,12 +188,6 @@ Create predictive models to accurately detect whether a transaction is normal or
 </table>
 </div>
 
-## Dataset information
-
-- 284807 rows x 31 columns
-- The mean of transaction amount is 88.34961925093133. But since it is an imbalanced data, using the average of all values is not the best information about beacuse it is sensitive to ouliers. Median is the best central tendency measure, giving a value of 22.
-- No NaN Values in the dataframe.
-- You can know if a transaction was a fraud because it has a class column: 0 means non-fraudulent (99.83 %) meanwhile 1 means fraudulent transaction (0.173 %).
 
 ## Some useful plots for business practices
 
@@ -256,27 +267,16 @@ Examples of Normal Distribution:
 Since not all columns were standarized, we apply RobustScaler() because is less prone to outliers.
 
 ## Splitting data
-Enfoque propuesto: 
-Separación previa en conjunto de entrenamiento y test:
 
-Se realiza un train_test_split inicial para asegurarse de que el conjunto de test no se vea afectado por el Subsampling u Oversampling.
+The dataset is split into training, validation, and test sets, with an important focus on maintaining the original distribution of the test set. This ensures a realistic evaluation of the model's performance.
 
-La idea es que cualquier muestreo (balanceo) solo se aplique al conjunto de entrenamiento, mientras que el conjunto de test permanece con su distribución original para evaluar el rendimiento de manera realista.
+1. Sampling Applied Only to the Training Set: Subsampling or Oversampling techniques are used exclusively on the training set to balance the class distribution, allowing the model to learn patterns in both fraudulent and non-fraudulent transactions.
 
-Aplicar sampling solo al conjunto de entrenamiento:
+2. Evaluation on the Original Test Set: The test set remains unaltered, retaining the natural class imbalance. This ensures that model evaluation reflects real-world conditions, where fraudulent transactions are rare.
 
-Las técnicas de Subsampling u Oversampling se aplican únicamente en el conjunto de entrenamiento (balanceando las clases).
+3. Why Maintain the Original Test Set? The key objective is to train the model on a balanced training set, but test its performance on the original, imbalanced test set. This provides a more accurate measure of how the model will perform in production, where the data remains skewed.
 
-Evaluación en el conjunto de test original:
-
-El modelo es evaluado sobre el conjunto de test que quedó intacto, sin haber sido modificado por las técnicas de muestreo.
-Esto asegura que estés evaluando el modelo con un conjunto de datos que representa la realidad, donde las clases están desbalanceadas.
-
-
-Before applying any sampling technique, it’s crucial to separate the original dataframe. Although we will split the data during the implementation of Random Under-Sampling or Over-Sampling techniques, it is important to remember that we should test our models on the original testing set, not on the subset created by these techniques. The primary objective is to fit the model using the modified dataframes (that have been under-sampled or over-sampled) to help the model detect patterns, and then evaluate its performance on the untouched, original testing set.
-
-## Under-sampling method
-
+In this project, the *train_test_split* function is used to create the initial data separation. Afterward, *Under-Sampling* or *Over-Sampling* techniques are applied only to the training set to better prepare the model, while testing is always done on the original test set for realistic results.
 
 ## Correlation Matrices
 
@@ -571,24 +571,50 @@ where $\mathbf{V}_{k}$ is the matrix containing the top $k$  eigenvectors.
 ![PCA](./plots/pca.png)
 
 
-## Classification task (is it a fraud case or not?)
-We will train and evaluate various classifiers from scikit-learn to assess their performance. Additionally, we will compare the processing speed of scikit-learn algorithms with their RAPIDS counterparts. While scikit-learn operates on the CPU, RAPIDS leverages NVIDIA GPUs for accelerated computation. This comparison aims to highlight the performance differences between CPU-based and GPU-based processing.
+## Classification task
 
-Particularly in high-dimensional spaces, data can more easily be separated linearly and the simplicity of classifiers such as naive Bayes and linear SVMs might lead to better generalization than is achieved by other classifiers.
+After successfully removing outliers and applying dimensionality reduction techniques, we proceeded to the classification task. The goal is to evaluate several classifiers to determine which performs best in detecting fraudulent transactions.
 
-One crucial aspect to highlight is the use of the `average='weighted'` parameter. When calculating metrics such as precision, recall, or F1 Score, the macro average considers the performance of each class independently and then averages these values. This approach is akin to assessing how well the model performs for each category individually before determining the overall average performance across all categories. In contrast, a weighted average assigns more significance to certain classes based on their representation or importance within the dataset. This method ensures that the evaluation metric reflects the performance more accurately, especially in cases where class distributions are imbalanced. Essentially, it's like prioritizing the opinions of more knowledgeable or influential members in a group discussion, leading to a more nuanced and representative assessment of the model's effectiveness.
+### Classifiers 
 
-!El enfoque que hacemos aca es de dos formas: La primera es sin la validacion cruzada, para tambien comparar con RAPIDS.
-El segundo, es con validación cruzada.
+  1. K-Nearest Neighbors (KNN): The KNeighborsClassifier with k=3 was used to classify transactions based on proximity to known examples. KNN is simple and intuitive, making it a good baseline for comparison.
+  2. Support Vector Classifier (SVC): The SVC with a linear kernel was implemented. SVCs are effective in high-dimensional spaces and are well-suited for datasets with clear class separation, even in imbalanced scenarios.
+  3. Random Forest: A RandomForestClassifier with max_depth=5, n_estimators=10, max_features=1 was applied. Random forests are robust ensemble models that reduce overfitting and handle class imbalance well by aggregating the results of multiple decision trees.
+  4. Logistic Regression: Logistic regression, a widely used linear classifier, was included for its interpretability and effectiveness in binary classification tasks. It's known for handling large feature spaces and can serve as a benchmark for more complex models.
+  5. Gaussian Naive Bayes: This probabilistic classifier assumes independence among features and is effective when the dataset satisfies this assumption. It's computationally efficient and performs well on smaller datasets or when feature independence holds true.
 
-### Nearest Neighbors
-### SVC
-### Random Forest
-### Logistic Regression
-### GaussianNB
+Each classifier was trained on a balanced training set using undersampling techniques and tested on the original, imbalanced test set to ensure realistic performance evaluation.
 
-## Cross validation
 
+
+### Metrics
+
+To evaluate the effectiveness of the classifiers, the following metrics were used.
+
+1. **Precision:** Measures the proportion of true positive predictions (fraud detected correctly) out of all positive predictions (both true and false positives). It answers the question: "Of all the transactions predicted as fraud, how many were actually fraudulent?"
+  $$ \mathbf{Precision} = \frac{TP}{TP + FP} $$
+  - TP: True Positives (correctly classified frauds)
+  - FP: False Positives (non-fraudulent transactions misclassified as fraud).\\
+  In fraud detection, precision is important because false positives (non-fraud labeled as fraud) can cause unnecessary actions, such as customer dissatisfaction due to wrongly flagged transactions, or a big waste of time and money.
+
+2. **Recall:** (also known as sensitivity or true positive rate) measures the proportion of actual fraud cases that were correctly identified by the model. It answers: "Of all the actual frauds, how many were caught?"
+  $$ \mathbf{Recall} = \frac{TP}{TP + FN} $$
+  - FN: False Negatives (fraudulent transactions missed by the model).\\
+  High recall is crucial in fraud detection because missing a fraudulent transaction (false negative) can lead to financial loss.
+
+3. **F1 score:** Is the harmonic mean of precision and recall. It balances the two metrics and provides a single score to evaluate the model's overall performance when both false positives and false negatives matter.
+  $$ \mathbf{F1} = 2\times\frac{Precision \times Recall}{Precision + Recall} $$ \\
+  The F1 score is particularly useful when you want to strike a balance between precision and recall.
+
+4. **F2 score:** The F2 score is a variant of the F1 score that weights recall higher than precision. It is useful when missing fraudulent transactions (false negatives) is more costly than raising false alarms (false positives).
+ $$ \mathbf{F2} = (1+2^2)\times\frac{Precision \times Recall}{4 \times Precision + Recall} $$ \\
+  This score is valuable when the business goal prioritizes catching as many fraud cases as possible, even if it results in more false positives.
+
+
+#### Importance of *average='weighted'*
+In imbalanced datasets like fraud detection, where non-fraudulent transactions dominate, using average='weighted' ensures that the performance of each class is accounted for based on its frequency in the dataset. Without this weighting, a model that performs well on the majority class (non-fraud) but poorly on the minority class (fraud) could appear to have good overall metrics.
+
+By using average='weighted', the metrics reflect the performance across both classes, preventing the model’s score from being skewed by the dominant class. This is essential in fraud detection, where the minority class (fraud) is the critical focus, despite being underrepresented.
 
 
 ## Learning Curves
@@ -614,37 +640,55 @@ Bias-Variance Tradeoff:
 
 - Learning curves help visualize the bias-variance tradeoff in a model. A high bias model (underfitting) can be identified by low training and test scores, while a high variance model (overfitting) shows a large gap between high training scores and lower test scores. The goal is to find a balance where the model achieves high scores on both training and test sets, indicating low bias and low variance.
 
+### Classifiers performance for under-sampling technique:
+
+![Learning Curve](./plots/lc.png)
+
 
 1. KNeighborsClassifier:
 
-- Both the training and test scores are very close and high, indicating good performance on both the training and validation sets.
-- There is minimal gap between the training and test scores, suggesting that the model generalizes well and does not overfit the data.
+- Training Accuracy: Starts very high, suggesting the model fits the training data well.
+- Test Accuracy: Initially much lower, but improves with more data, narrowing the gap between train and test scores.
+- Conclusion: Initially overfitting, but generalization improves as more data is provided. Eventually, it seems to balance, but there's still a gap that indicates slight overfitting.
 
-2. LogisticRegression:
+2. SVC (Support Vector Classifier):
 
-- Similar to KNeighborsClassifier, the training and test scores are very close and high.
-- The small gap between the training and test scores indicates that the model is also generalizing well and is not overfitting.
+- Training Accuracy: High but decreases slightly as more data is added.
+- Test Accuracy: Starts low and improves as training set size increases.
+- Conclusion: This suggests the model may benefit from more data. The consistent gap indicates it may be slightly overfitting but could generalize better with even more data.
 
-3. GaussianNB:
+3. RandomForestClassifier:
 
-- The training and test scores start with a noticeable gap, but this gap decreases as the number of samples increases.
-- Initially, the model shows signs of overfitting, as indicated by the high variance (large gap between training and test scores).
-- As the number of samples grows, the test score increases and the training score decreases, indicating that the model improves its generalization with more data.
-- By the end, the training and test scores converge, suggesting that the model eventually learns to generalize better.
+- Training Accuracy: Very high but decreases slightly as more samples are added.
+- Test Accuracy: Improves with more data but there's a notable gap.
+- Conclusion: The Random Forest is clearly overfitting, especially on smaller datasets. However, with more data, generalization improves, though the gap remains.
 
-**Overall Conclusion:**
+4. LogisticRegression:
 
-- KNeighborsClassifier and LogisticRegression models are performing well with both high training and test scores, indicating low bias and low variance.
-- GaussianNB shows an initial overfitting tendency, but with more training data, it improves its performance and generalizes better.
-- Increasing the number of training samples generally improves the performance and generalization of models, as evidenced by the GaussianNB classifier.
+- Training Accuracy: Starts high and remains relatively stable.
+- Test Accuracy: Starts lower but increases with more data.
+- Conclusion: Logistic regression shows good generalization with smaller data sets. There's minimal overfitting, but a modest improvement in generalization with more data.
 
-![LC](./plots/lc.png)
+5. GaussianNB:
 
+- Training Accuracy: Low initially, improves with more data, then declines slightly.
+- Test Accuracy: Starts very low, rises but remains unstable with high variance.
+- Conclusion: GaussianNB struggles with both training and generalization. It may be underfitting the data due to its assumptions (e.g., that the features are normally distributed).
+
+**General Conclusions:**
+
+- Overfitting: Models like KNeighbors, RandomForest, and SVC tend to overfit initially, as indicated by the large gap between the training and test scores, which decreases as more training data is added.
+
+- Underfitting: GaussianNB shows signs of underfitting as it struggles to achieve good performance on both the training and test sets.
+
+- Impact of More Data: For most models (SVC, RandomForest, LogisticRegression), adding more data improves test accuracy and narrows the gap between the training and test scores, suggesting that these models benefit from more training data.
+
+- Stability: Logistic Regression shows a more stable performance across different data sizes, indicating that it's a relatively consistent model, with limited overfitting.
 
 ### Bias vs Variance definition
-Bias: It is related to the assumptions made by the model to learn the target function. Often related to training set. High bias means too simplistic and does not capture the complexity of the data, leading underfitting.
+- Bias: It is related to the assumptions made by the model to learn the target function. Often related to training set. High bias means too simplistic and does not capture the complexity of the data, leading underfitting.
 
-Variance: It is the amount by which the model's predictions would change if it were trained on a different dataset. Often related to test error: If the model has high variance, means that is too complex and fits the training data very closely, capturing noise as well. Whereas a low variance means that the model is less sensitive to the specifics of the training data and generalizes well to unseen data. This typically results in more similar training and test errors.
+- Variance: It is the amount by which the model's predictions would change if it were trained on a different dataset. Often related to test error: If the model has high variance, means that is too complex and fits the training data very closely, capturing noise as well. Whereas a low variance means that the model is less sensitive to the specifics of the training data and generalizes well to unseen data. This typically results in more similar training and test errors.
 
 **Bias-Variance Tradeoff**
 
@@ -654,7 +698,20 @@ High Bias, Low Variance: A simple model that does not fit the training data well
 Low Bias, High Variance: A complex model that fits the training data too well and does not generalize to new data (overfitting).
 The goal is to find a model complexity that achieves a good tradeoff between bias and variance, leading to low overall error on both training and test data.
 
-## Over-sampling technique
+## Hyperparameter Tuning - GridSearchCV
+
+### What parameters? What are they?
+
+
+## Under-sampling with over-sampling technique
+
+
 
 
 ## Conclusion
+
+
+
+## Useful links
+
+[Framework for Imbalanced Classification Projects](https://machinelearningmastery.com/framework-for-imbalanced-classification-projects/)
