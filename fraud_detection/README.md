@@ -597,7 +597,7 @@ To evaluate the effectiveness of the classifiers, the following metrics were use
 
   - TP: True Positives (correctly classified frauds)
   - FP: False Positives (non-fraudulent transactions misclassified as fraud).
-  
+
   In fraud detection, precision is important because false positives (non-fraud labeled as fraud) can cause unnecessary actions, such as customer dissatisfaction due to wrongly flagged transactions, or a big waste of time and money.
 
 2. **Recall:** (also known as sensitivity or true positive rate) measures the proportion of actual fraud cases that were correctly identified by the model. It answers: "Of all the actual frauds, how many were caught?"
@@ -685,7 +685,7 @@ Bias-Variance Tradeoff:
 - Test Accuracy: Starts very low, rises but remains unstable with high variance.
 - Conclusion: GaussianNB struggles with both training and generalization. It may be underfitting the data due to its assumptions (e.g., that the features are normally distributed).
 
-**General Conclusions:**
+**General Conclusions for Learning Curve:**
 
 - Overfitting: Models like KNeighbors, RandomForest, and SVC tend to overfit initially, as indicated by the large gap between the training and test scores, which decreases as more training data is added.
 
@@ -696,9 +696,9 @@ Bias-Variance Tradeoff:
 - Stability: Logistic Regression shows a more stable performance across different data sizes, indicating that it's a relatively consistent model, with limited overfitting.
 
 ### Bias vs Variance definition
-- Bias: It is related to the assumptions made by the model to learn the target function. Often related to training set. High bias means too simplistic and does not capture the complexity of the data, leading underfitting.
+- **Bias:** It is related to the assumptions made by the model to learn the target function. Often related to training set. High bias means too simplistic and does not capture the complexity of the data, leading underfitting.
 
-- Variance: It is the amount by which the model's predictions would change if it were trained on a different dataset. Often related to test error: If the model has high variance, means that is too complex and fits the training data very closely, capturing noise as well. Whereas a low variance means that the model is less sensitive to the specifics of the training data and generalizes well to unseen data. This typically results in more similar training and test errors.
+- **Variance:** It is the amount by which the model's predictions would change if it were trained on a different dataset. Often related to test error: If the model has high variance, means that is too complex and fits the training data very closely, capturing noise as well. Whereas a low variance means that the model is less sensitive to the specifics of the training data and generalizes well to unseen data. This typically results in more similar training and test errors.
 
 **Bias-Variance Tradeoff**
 
@@ -710,17 +710,127 @@ The goal is to find a model complexity that achieves a good tradeoff between bia
 
 ## Hyperparameter Tuning - GridSearchCV
 
-### What parameters? What are they?
+Hyperparameter tuning involves finding the best combination of parameters for a machine learning model to improve its performance. Unlike model parameters, which are learned during training (such as weights in logistic regression), hyperparameters are set before the training process begins and control aspects of how the model learns (e.g., regularization strength or optimization algorithm).
+
+GridSearchCV is a method that automates the process of hyperparameter tuning by exhaustively searching through a specified grid of hyperparameters. For each combination of parameters, the model is trained and evaluated using cross-validation, ensuring that the results are more reliable than simply splitting the data once.
+
+In this case, GridSearchCV was used to fine-tune the hyperparameters of the LogisticRegression model. The parameters being tested were:
+
+- **penalty:** Regularization method, here set to 'l2', which is commonly used to prevent overfitting.
+- **C:** Inverse of regularization strength, where smaller values specify stronger regularization. The values tested ranged from 1.0 to 0.1.
+- **class_weight:** Balances the dataset by assigning different weights to classes. Both 'balanced' and None were tested.
+- **solver:** Optimization algorithms used to find the best model parameters. The solvers tested were 'lbfgs', 'liblinear', and 'newton-cholesky'.
+
+Despite running GridSearchCV with these parameters, the performance of the LogisticRegression model might not have improved due to several possible reasons:
+
+- **Feature Complexity:** Logistic Regression is a linear model, which might not capture complex relationships in the data that non-linear classifiers can handle.
+
+- **Hyperparameter Range:** Although different regularization strengths and solvers were tested, they may not have a significant impact on the model's performance for this specific dataset. The variations in hyperparameters might not have been enough to produce noticeable improvements.
+
+- **Imbalanced Data:** Even though the model was tested with class_weight='balanced', Logistic Regression may struggle with highly imbalanced datasets, as it might not effectively separate the minority class (fraudulent transactions) from the majority class.
+
+- **Under Sampling Impact:** The under sampling techniques used earlier may have removed critical information, limiting the Logistic Regression model's ability to improve performance.
+
+In cases where tuning doesn’t lead to improvements, more complex models like Random Forests or SVC may better capture patterns in the data.
+
+**The results of the Logistic Regression with under-sampling technique are showed in results section**
+
+## Combining Under-Sampling and Over-Sampling techniques
+
+In order to address the class imbalance in the dataset more effectively, a combination of Random Under-Sampling and SMOTE (Synthetic Minority Over-sampling Technique) was used. This approach aims to balance the dataset while preserving valuable information from both classes.
+
+The pipeline created uses both sampling techniques in sequence:
+1. **Random Under-Sampling:** This technique reduces the majority class (non-fraudulent transactions) by randomly selecting a subset, which helps prevent overwhelming the model with non-fraud cases.
+2. **SMOTE:** After under-sampling, SMOTE generates synthetic samples for the minority class (fraudulent transactions) by interpolating between existing fraud examples. This helps the model learn more generalized patterns for detecting fraud.
+3. **Classifier:** The classifier used in this pipeline is LogisticRegression.
+
+### GridSearchCV and Metrics
+
+To fine-tune the model, GridSearchCV was applied to the pipeline. Two different evaluation metrics were used to optimize the model according to different business needs.
+
+1. **First Approach - F1 Weighted:**
+
+   The first objective was to balance precision and recall by optimizing for the F1 weighted score, which accounts for the class imbalance. This approach aims to achieve a good trade-off between catching fraud (high recall) while keeping false positives (low precision) under control.
+
+   **Why F1 Weighted?**
+
+   In fraud detection, both false positives and false negatives are costly. By using F1 weighted, the goal was to ensure that both precision and recall were considered, balancing the need to catch fraud without flagging too many legitimate transactions as fraudulent.
 
 
-## Under-sampling with over-sampling technique
+2. **Second Approach - Recall:**
+
+    In the second approach, the focus was shifted to maximizing recall. The goal was to catch as many fraudulent transactions as possible, even if it meant sacrificing precision. This approach is ideal when missing a fraud case (false negatives) is far more costly than misclassifying non-fraud transactions as fraud (false positives).
+
+    **Why Prioritize Recall?**
+
+    In situations where failing to detect fraud can lead to significant financial losses, maximizing recall is critical. This ensures the model flags most fraud cases, even at the expense of triggering more false alarms.
+
+**The results of the both models are showed in results section**
+
+
+
+## Results
+
+The following tools were utilized to assess the performance of the various models trained with the characteristics detailed previously:
+
+**Confusion Matrix**: is a performance measurement tool for classification models. It provides a visual representation of the actual versus predicted classifications, enabling an assessment of how well the model is performing. The matrix consists of four key components:
+
+- True Positives (TP): Correctly predicted positive instances.
+- False Positives (FP): Negative instances incorrectly predicted as positive.
+- True Negatives (TN): Correctly predicted negative instances.
+- False Negatives (FN): Positive instances incorrectly predicted as negative.
+
+By analyzing these components, the confusion matrix helps identify specific types of classification errors and informs decisions on model optimization.
+
+**Precision-Recall (PR) Curve** is a graphical representation that illustrates the trade-off between precision and recall for a classification model at various thresholds. It is especially useful in imbalanced datasets where the positive class (e.g., fraud) is rare.
+
+- Precision: The ratio of true positive predictions to the total positive predictions.
+- Recall: The ratio of true positive predictions to the total actual positive instances.
+
+The PR curve is created by plotting precision against recall for different thresholds, allowing for a comprehensive evaluation of the model's performance. A model that achieves high precision and recall will display a curve that is close to the top right corner of the graph.
+
+### Under-Sampling Technique
+![Under-Sampling confusion Matrix](./plots/undersmp_cm.png)
+![Under-Sampling PR Curve](./plots/undersmp_pr.png)
+
+|         |    pre |    rec |    spe |    f1 |    geo |    iba |   sup |
+|---------|--------|--------|--------|-------|--------|--------|-------|
+| **0**   |  1.00  |  0.96  |  0.90  |  0.98 |  0.93  |  0.87  | 56864 |
+| **1**   |  0.04  |  0.90  |  0.96  |  0.08 |  0.93  |  0.86  |   98  |
+| avg / total |  1.00  |  0.96  |  0.90  |  0.98 |  0.93  |  0.87  | 56962 |
+
+### Under and Over-Sampling Technique: Best Recall
+![Under-Over Sampling 2 confusion Matrix](./plots/unov_cm_2.png)
+![Under-Over Sampling 2 PR Curve](./plots/unov_pr_2.png)
+
+|         |    pre |    rec |    spe |    f1 |    geo |    iba |   sup |
+|---------|--------|--------|--------|-------|--------|--------|-------|
+| **0**   |  1.00  |  0.98  |  0.90  |  0.99 |  0.94  |  0.89  | 56864 |
+| **1**   |  0.07  |  0.90  |  0.98  |  0.13 |  0.94  |  0.87  |   98  |
+| avg / total |  1.00  |  0.98  |  0.90  |  0.99 |  0.94  |  0.89  | 5696  |
+
+### Under and Over-Sampling Technique: Good Recall and Good Precision
+![Under-Over Sampling 1 confusion Matrix](./plots/unov_cm_1.png)
+![Under-Over Sampling 1 PR Curve](./plots/unov_pr_1.png)
+
+|         |    pre |    rec |    spe |    f1 |    geo |    iba |   sup |
+|---------|--------|--------|--------|-------|--------|--------|-------|
+| **0**   |  1.00  |  1.00  |  0.84  |  1.00 |  0.91  |  0.85  | 56864 |
+| **1**   |  0.50  |  0.84  |  1.00  |  0.63 |  0.91  |  0.82  |   98  |
+| avg / total |  1.00  |  1.00  |  0.84  |  1.00 |  0.91  |  0.85  | 56962 |
 
 
 
 
 ## Conclusion
 
+In this project, we successfully developed predictive models for detecting fraudulent transactions by implementing a systematic approach that included data exploration, preprocessing, and model evaluation. We addressed the challenges of class imbalance through sampling techniques, which allowed us to create a balanced dataset for training.
 
+Key features were identified and outliers removed to enhance model performance. Dimensionality reduction techniques, such as PCA and T-SNE, were applied to simplify the models while maintaining their predictive capabilities.
+
+The evaluation of multiple classifiers revealed varying levels of performance. Notably, the undersampling method yielded a recall of 90% but with a precision of only 4%, resulting in a high number of false positives. By combining both under-sampling and over-sampling techniques, we improved precision to 7% while maintaining the same recall. Additionally, we developed a model that achieved a balanced trade-off with a recall of 84% and precision of 50, significantly reducing false positives compared to the total number of transactions.
+
+These findings underscore the importance of selecting appropriate metrics and techniques in developing fraud detection models that align with business objectives, striking a balance between catching fraudulent activities and minimizing false alerts.
 
 ## Useful links
 
