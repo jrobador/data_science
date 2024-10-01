@@ -20,7 +20,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, LearningCurveDisplay
 from sklearn.model_selection import GridSearchCV
 
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, accuracy_score, fbeta_score
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, fbeta_score
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.metrics import precision_recall_curve
 
@@ -429,7 +429,6 @@ f1_scorer = make_scorer(f1_score, average='weighted')
 f2_scorer = make_scorer(fbeta_score, beta=2)
 
 scoring_methods = {
-    "accuracy": 'accuracy',
     "precision": precision_scorer,
     "recall": recall_scorer,
     "f1": f1_scorer,
@@ -511,14 +510,11 @@ best_clf = load('./models/model_LR_undersampling.joblib')
 
 predictions = best_clf.predict(X_test)
 
-accuracy = accuracy_score(y_test, predictions)
 precision = precision_score(y_test, predictions, average='weighted')
 recall = recall_score(y_test, predictions, average='weighted')
 f1 = f1_score(y_test, predictions, average='weighted')
 f2 = fbeta_score(y_test, predictions, average='weighted', beta=2)
 
-
-print(f"Accuracy: {accuracy:.4f}")
 print(f"Precision (weighted): {precision:.4f}")
 print(f"Recall (weighted): {recall:.4f}")
 print(f"F1 Score (weighted): {f1:.4f}")
@@ -553,7 +549,7 @@ fig, ax = plt.subplots(nrows=1, ncols=len(classifiers), sharey=True, figsize=(30
 for i, clf in enumerate(classifiers):
     LearningCurveDisplay.from_estimator(clf, X_subsampling, y_subsampling, 
                                         cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), 
-                                        scoring=scoring_methods["accuracy"], ax=ax[i], n_jobs=1)
+                                        scoring="f1_weighted", ax=ax[i], n_jobs=1)
     ax[i].set_title(f"{clf.__class__.__name__}")
 
 fig.text(0.04, 0.5, 'Score', va='center', rotation='vertical')
@@ -596,14 +592,11 @@ model_grid_search = grid_search.best_estimator_
 model_grid_search.fit(X_subsampling, y_subsampling)
 predictions_grid_search = best_clf.predict(X_test)
 
-
-accuracy = accuracy_score(y_test, predictions_grid_search)
 precision = precision_score(y_test, predictions_grid_search, average='weighted')
 recall = recall_score(y_test, predictions_grid_search, average='weighted')
 f1 = f1_score(y_test, predictions_grid_search, average='weighted')
 f2 = fbeta_score(y_test, predictions_grid_search, average='weighted', beta=2)
 
-print(f"Accuracy: {accuracy:.4f}")
 print(f"Precision (weighted): {precision:.4f}")
 print(f"Recall (weighted): {recall:.4f}")
 print(f"F1 Score (weighted): {f1:.4f}")
