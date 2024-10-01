@@ -592,22 +592,30 @@ Each classifier was trained on a balanced training set using undersampling techn
 To evaluate the effectiveness of the classifiers, the following metrics were used.
 
 1. **Precision:** Measures the proportion of true positive predictions (fraud detected correctly) out of all positive predictions (both true and false positives). It answers the question: "Of all the transactions predicted as fraud, how many were actually fraudulent?"
+
   $$ \mathbf{Precision} = \frac{TP}{TP + FP} $$
+
   - TP: True Positives (correctly classified frauds)
   - FP: False Positives (non-fraudulent transactions misclassified as fraud).\\
   In fraud detection, precision is important because false positives (non-fraud labeled as fraud) can cause unnecessary actions, such as customer dissatisfaction due to wrongly flagged transactions, or a big waste of time and money.
 
 2. **Recall:** (also known as sensitivity or true positive rate) measures the proportion of actual fraud cases that were correctly identified by the model. It answers: "Of all the actual frauds, how many were caught?"
+
   $$ \mathbf{Recall} = \frac{TP}{TP + FN} $$
+
   - FN: False Negatives (fraudulent transactions missed by the model).\\
   High recall is crucial in fraud detection because missing a fraudulent transaction (false negative) can lead to financial loss.
 
 3. **F1 score:** Is the harmonic mean of precision and recall. It balances the two metrics and provides a single score to evaluate the model's overall performance when both false positives and false negatives matter.
+
   $$ \mathbf{F1} = 2\times\frac{Precision \times Recall}{Precision + Recall} $$ \\
+  
   The F1 score is particularly useful when you want to strike a balance between precision and recall.
 
 4. **F2 score:** The F2 score is a variant of the F1 score that weights recall higher than precision. It is useful when missing fraudulent transactions (false negatives) is more costly than raising false alarms (false positives).
+
  $$ \mathbf{F2} = (1+2^2)\times\frac{Precision \times Recall}{4 \times Precision + Recall} $$ \\
+ 
   This score is valuable when the business goal prioritizes catching as many fraud cases as possible, even if it results in more false positives.
 
 
