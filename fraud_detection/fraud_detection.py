@@ -17,16 +17,12 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, LearningCurveDisplay, RepeatedStratifiedKFold
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, LearningCurveDisplay
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_predict
 
 from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, accuracy_score, fbeta_score
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import precision_recall_curve
-
-from datetime import datetime
 
 from collections import Counter
 from imblearn.pipeline import Pipeline
@@ -35,9 +31,6 @@ from imblearn.over_sampling import SMOTE
 from imblearn.metrics import classification_report_imbalanced
 
 from joblib import dump, load
-
-import os
-
 #%%
 # Have first sense of dataset
 
@@ -507,7 +500,7 @@ if best_clf is None:
 
 best_clf.fit(X_subsampling, y_subsampling)
 
-model_filename = f'./models/model_{best_clf.__class__.__name__}.joblib'
+model_filename = f'./models/model_LR_undersampling.joblib'
 dump(best_clf, model_filename)
 print(f"Model {best_clf.__class__.__name__} saved as {model_filename}")
 
@@ -541,20 +534,6 @@ disp.plot()
 
 plt.title(f"Confusion Matrix for {best_clf}")
 plt.savefig("./plots/undersmp_cm")
-
-#ROC Curve
-fpr, tpr, _ = roc_curve(y_test, best_clf.predict_proba(X_test)[:, 1])
-roc_auc = auc(fpr, tpr)
-
-plt.figure()
-plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title(f'Receiver Operating Characteristic for {best_clf}')
-plt.legend(loc="lower right")
 plt.show()
 
 #Precision - Recall Curve
@@ -564,6 +543,7 @@ plt.step(recall, precision, where='post')
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title(f'Precision-Recall curve for {best_clf}')
+plt.savefig('./plots/undersmp_pr')
 plt.show()
 
 # %% 
@@ -623,7 +603,6 @@ recall = recall_score(y_test, predictions_grid_search, average='weighted')
 f1 = f1_score(y_test, predictions_grid_search, average='weighted')
 f2 = fbeta_score(y_test, predictions_grid_search, average='weighted', beta=2)
 
-
 print(f"Accuracy: {accuracy:.4f}")
 print(f"Precision (weighted): {precision:.4f}")
 print(f"Recall (weighted): {recall:.4f}")
@@ -636,21 +615,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", 
 disp.plot()
 
 plt.title(f"Confusion Matrix for {model_grid_search}")
-plt.show()
-
-#ROC Curve
-fpr, tpr, _ = roc_curve(y_test, best_clf.predict_proba(X_test)[:, 1])
-roc_auc = auc(fpr, tpr)
-
-plt.figure()
-plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title(f'Receiver Operating Characteristic for {best_clf}')
-plt.legend(loc="lower right")
+plt.savefig('./plots/cm_grid_search')
 plt.show()
 
 #Precision - Recall Curve
@@ -660,6 +625,7 @@ plt.step(recall, precision, where='post')
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title(f'Precision-Recall curve for {best_clf}')
+plt.savefig('./plots/pr_grid_search')
 plt.show()
 
 # %%
@@ -724,20 +690,6 @@ disp.plot()
 
 plt.title(f"Confusion Matrix for {best_classifier_unov}")
 plt.savefig("plots/unov_cm_1")
-
-#ROC Curve
-fpr, tpr, _ = roc_curve(y_test, best_classifier_unov.predict_proba(X_test)[:, 1])
-roc_auc = auc(fpr, tpr)
-
-plt.figure()
-plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title(f'Receiver Operating Characteristic for {best_classifier_unov}')
-plt.legend(loc="lower right")
 plt.show()
 
 #Precision - Recall Curve
@@ -747,15 +699,18 @@ plt.step(recall, precision, where='post')
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title(f'Precision-Recall curve for {best_classifier_unov}')
+plt.savefig("plots/unov_pr_1")
 plt.show()
-
-# %%
-# Report Imbalanced
 
 print(classification_report_imbalanced(y_test, predictions_unov))
 
+#%%
+model_filename = f'./models/model_LR_unovsampling_1.joblib'
+dump(best_classifier_unov, model_filename)
+print(f"Model {best_classifier_unov.__class__.__name__} saved as {model_filename}")
+
 # %%
-#Classifier trained for better recall (91% recall)
+#Classifier trained for the best recall (90% recall)
 pipeline_training_data = Pipeline(steps=[
     ('under', RandomUnderSampler(sampling_strategy=0.1, random_state=37)),  
     ('over', SMOTE(sampling_strategy=0.6, random_state=37))
@@ -777,6 +732,25 @@ disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", 
 disp.plot()
 
 plt.title(f"Confusion Matrix for {best_classifier_unov}")
-plt.savefig("plots/unov_cm_2")# %%
+plt.savefig("plots/unov_cm_2")
+plt.show()
+
+#Precision - Recall Curve
+precision, recall, _ = precision_recall_curve(y_test, best_classifier_unov.predict_proba(X_test)[:, 1])
+
+plt.step(recall, precision, where='post')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+
+plt.title(f'Precision-Recall curve for {best_classifier_unov}')
+plt.savefig("plots/unov_pr_2")
+plt.show()
+
+print(classification_report_imbalanced(y_test, predictions_unov))
+
+# %%
+model_filename = f'./models/model_LR_unovsampling_2.joblib'
+dump(best_classifier_unov, model_filename)
+print(f"Model {best_classifier_unov.__class__.__name__} saved as {model_filename}")
 
 # %%
