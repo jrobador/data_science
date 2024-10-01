@@ -590,7 +590,7 @@ def f2_score(y_true, y_pred):
 
 f2_scorer = make_scorer(f2_score)
 
-LogisticRegression_model = LogisticRegression(max_iter=7000)
+LogisticRegression_model = LogisticRegression(max_iter=7000, random_state=37)
 
 param_grid = {
     'penalty': ['l2'],
@@ -667,8 +667,8 @@ plt.show()
 
 classifier = LogisticRegression(max_iter=7000)
 
-under = RandomUnderSampler(sampling_strategy=0.1)
-over = SMOTE(sampling_strategy='auto')
+under = RandomUnderSampler(sampling_strategy=0.1, random_state=37)
+over = SMOTE(sampling_strategy='auto', random_state=37)
 x1, y1 = under.fit_resample(X_train, y_train)
 x2, y2 = over.fit_resample(x1,y1)
 Counter (y2)
@@ -676,7 +676,7 @@ Counter (y2)
 pipeline = Pipeline(steps=[
     ('under', RandomUnderSampler()),  
     ('over', SMOTE()),            
-    ('classifier', LogisticRegression(max_iter=1000))
+    ('classifier', LogisticRegression(max_iter=1000, random_state=37))
 ])
 
 param_grid = {
@@ -700,6 +700,7 @@ dump(best_clf, model_filename)
 print(f"Model {grid_search.__class__.__name__} saved as {model_filename}")
 
 # %%
+# Classifier trained for a good performance (85% recall, 50% precision)
 pipeline_training_data = Pipeline(steps=[
     ('under', RandomUnderSampler(sampling_strategy=0.005)),  
     ('over', SMOTE(sampling_strategy=0.1))
@@ -709,18 +710,73 @@ X_resampled, y_resampled = pipeline_training_data.fit_resample(X_train, y_train)
 
 print(f"Original dataset shape: {Counter(y_train)}")
 print(f"Resampled dataset shape: {Counter(y_resampled)}")
-# %%
-# Confusion Matrix
 
-best_classifier_unov = LogisticRegression(penalty='l2', C=0.1, class_weight=None, solver='liblinear')
+best_classifier_unov = LogisticRegression(penalty='l2', C=0.1, class_weight=None, solver='liblinear', random_state=37)
 best_classifier_unov.fit(X_resampled,y_resampled)
 predictions_unov = best_classifier_unov.predict(X_test)
+
+#%%
+# Confusion Matrix
 
 cm = confusion_matrix(y_test, predictions_unov)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", "Frauds"])
 disp.plot()
 
 plt.title(f"Confusion Matrix for {best_classifier_unov}")
-plt.savefig("plots/unov_cm")
+plt.savefig("plots/unov_cm_1")
+
+#ROC Curve
+fpr, tpr, _ = roc_curve(y_test, best_classifier_unov.predict_proba(X_test)[:, 1])
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title(f'Receiver Operating Characteristic for {best_classifier_unov}')
+plt.legend(loc="lower right")
+plt.show()
+
+#Precision - Recall Curve
+precision, recall, _ = precision_recall_curve(y_test, best_classifier_unov.predict_proba(X_test)[:, 1])
+
+plt.step(recall, precision, where='post')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title(f'Precision-Recall curve for {best_classifier_unov}')
+plt.show()
+
+# %%
+# Report Imbalanced
+
+print(classification_report_imbalanced(y_test, predictions_unov))
+
+# %%
+#Classifier trained for better recall (91% recall)
+pipeline_training_data = Pipeline(steps=[
+    ('under', RandomUnderSampler(sampling_strategy=0.1, random_state=37)),  
+    ('over', SMOTE(sampling_strategy=0.6, random_state=37))
+])
+
+X_resampled, y_resampled = pipeline_training_data.fit_resample(X_train, y_train)
+
+print(f"Original dataset shape: {Counter(y_train)}")
+print(f"Resampled dataset shape: {Counter(y_resampled)}")
+
+best_classifier_unov = LogisticRegression(penalty='l2', C=0.1, class_weight='balanced', solver='newton-cholesky', random_state=37)
+best_classifier_unov.fit(X_resampled,y_resampled)
+predictions_unov = best_classifier_unov.predict(X_test)
+
+# %%
+# Confusion matrix
+cm = confusion_matrix(y_test, predictions_unov)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", "Frauds"])
+disp.plot()
+
+plt.title(f"Confusion Matrix for {best_classifier_unov}")
+plt.savefig("plots/unov_cm_2")# %%
 
 # %%
