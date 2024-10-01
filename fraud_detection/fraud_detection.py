@@ -623,14 +623,6 @@ plt.show()
 
 # %%
 # Under and Over-sampling technique
-
-classifier = LogisticRegression(max_iter=7000)
-
-under = RandomUnderSampler(sampling_strategy=0.1, random_state=37)
-over = SMOTE(sampling_strategy='auto', random_state=37)
-x1, y1 = under.fit_resample(X_train, y_train)
-x2, y2 = over.fit_resample(x1,y1)
-Counter (y2)
 #%%
 pipeline = Pipeline(steps=[
     ('under', RandomUnderSampler()),  
