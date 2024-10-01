@@ -17,15 +17,26 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, LearningCurveDisplay
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, LearningCurveDisplay, RepeatedStratifiedKFold
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_predict
 
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, accuracy_score
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, accuracy_score, fbeta_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import precision_recall_curve
+
 from datetime import datetime
 
-from imblearn.pipeline import make_pipeline
-from imblearn.over_sampling import SMOTE
+from collections import Counter
+from imblearn.pipeline import Pipeline
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.over_sampling import SMOTE 
 from imblearn.metrics import classification_report_imbalanced
 
+from joblib import dump, load
+
+import os
 
 #%%
 # Have first sense of dataset
@@ -124,19 +135,20 @@ df.insert(1, 'scaled_time',   RobustScaler().fit_transform(df['Time'].values.res
 df.drop(['Time','Amount'], axis=1, inplace=True)
 
 df.describe()
+
 # %%
 # Splitting data
 
-X = df.drop('Class', axis=1)
-y = df['Class']
+x_tmp = df.drop('Class', axis=1)
+y_tmp = df['Class']
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=37, stratify=y)
+    x_tmp, y_tmp, test_size=0.2, random_state=37, stratify=y_tmp)       #Stratify - Mantener relacion de datos
 
 print (f"length of X_train:{len(X_train)}, length of X_test:{len(X_test)}")
 
 #%%
-# Subsampling
+# Sub-sampling technique
 
 # Approach: Take randomly the same proportion of non-fraud transaction to avoid wrong correlations.
 # Why undersampling? Because our dataset is large enough and we can do it.
@@ -334,10 +346,10 @@ ax = fig.add_subplot(projection="3d")
 
 
 sc0, sc1, sc2 = data_embedded_TSNE[:,0], data_embedded_TSNE[:,1], data_embedded_TSNE[:,2]
-y = new_df_train['Class']
+y_drc = new_df_train['Class']
 
-ax.scatter(data_embedded_TSNE[(y == 0),0], data_embedded_TSNE[(y == 0),1], data_embedded_TSNE[(y == 0),2], c='yellow', label="Non Fraud")
-ax.scatter(data_embedded_TSNE[(y == 1),0], data_embedded_TSNE[(y == 1),1], data_embedded_TSNE[(y == 1),2], c='blue', label="Fraud")
+ax.scatter(data_embedded_TSNE[(y_drc == 0),0], data_embedded_TSNE[(y_drc == 0),1], data_embedded_TSNE[(y_drc == 0),2], c='yellow', label="Non Fraud")
+ax.scatter(data_embedded_TSNE[(y_drc == 1),0], data_embedded_TSNE[(y_drc == 1),1], data_embedded_TSNE[(y_drc == 1),2], c='blue', label="Fraud")
 
 ax.legend()
 
@@ -355,11 +367,8 @@ data_embedded_TSNE = TSNE(n_components=2, random_state=37).fit_transform((new_df
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot()
 
-
-y = new_df_train['Class']
-
-ax.scatter(data_embedded_TSNE[(y == 0),0], data_embedded_TSNE[(y == 0),1], c='yellow',  label="Non Fraud")
-ax.scatter(data_embedded_TSNE[(y == 1),0], data_embedded_TSNE[(y == 1),1], c='blue',    label="Fraud")
+ax.scatter(data_embedded_TSNE[(y_drc == 0),0], data_embedded_TSNE[(y_drc == 0),1], c='yellow',  label="Non Fraud")
+ax.scatter(data_embedded_TSNE[(y_drc == 1),0], data_embedded_TSNE[(y_drc == 1),1], c='blue',    label="Fraud")
 
 ax.legend()
 
@@ -378,8 +387,8 @@ data_embedded_PCA_90 = pca_module_90.fit_transform((new_df_train.drop('Class', a
 
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot()
-plt.scatter(data_embedded_PCA_90[(y == 1),0], data_embedded_PCA_90[(y == 1),1],c='yellow', label="Fraud")
-plt.scatter(data_embedded_PCA_90[(y == 0),0], data_embedded_PCA_90[(y == 0),1],c='blue', label="Non-Fraud")
+plt.scatter(data_embedded_PCA_90[(y_drc == 1),0], data_embedded_PCA_90[(y_drc == 1),1],c='yellow', label="Fraud")
+plt.scatter(data_embedded_PCA_90[(y_drc == 0),0], data_embedded_PCA_90[(y_drc == 0),1],c='blue', label="Non-Fraud")
 
 plt.legend()
 ax.grid(True)
@@ -394,22 +403,18 @@ data_embedded_PCA_2 = pca_module_2.fit_transform((new_df_train.drop('Class', axi
 
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot()
-plt.scatter(data_embedded_PCA_2[(y == 1),0], data_embedded_PCA_2[(y == 1),1],c='yellow', label="Fraud")
-plt.scatter(data_embedded_PCA_2[(y == 0),0], data_embedded_PCA_2[(y == 0),1],c='blue', label="Non-Fraud")
+plt.scatter(data_embedded_PCA_2[(y_drc == 1),0], data_embedded_PCA_2[(y_drc == 1),1],c='yellow', label="Fraud")
+plt.scatter(data_embedded_PCA_2[(y_drc == 0),0], data_embedded_PCA_2[(y_drc == 0),1],c='blue', label="Non-Fraud")
 
 plt.legend()
 ax.grid(True)
 
 plt.savefig("./plots/pca.png")
 plt.show() 
+
+#--------------------------------
 # %%
 ### Classification task (is it a fraud case or not?)
-
-names = [
-    "Nearest Neighbors", "SVC",
-    "Random Forest", "Logistic Regression",
-    "GaussianNB"
-]
 classifiers = [
     KNeighborsClassifier(3),
     SVC(kernel="linear", C=0.025, random_state=37),
@@ -419,77 +424,303 @@ classifiers = [
     LogisticRegression(),
     GaussianNB()
 ]
-names_test = [
-    "Nearest Neighbors", "SVC",
-    "Random Forest", "Logistic Regression",
-    "GaussianNB"
-]
 clf_test = [
     KNeighborsClassifier(3),
     LogisticRegression(),
     GaussianNB()
 ]
-#%%
-# CV implementation
-
-sss = StratifiedKFold(n_splits=5, random_state=37, shuffle=True)
-
-fold_metrics = [
 # %%
-# Cross-Validation classifiers - built-in metric functions
 precision_scorer = make_scorer(precision_score, average='weighted')
 recall_scorer = make_scorer(recall_score, average='weighted')
 f1_scorer = make_scorer(f1_score, average='weighted')
+f2_scorer = make_scorer(fbeta_score, beta=2)
+
 scoring_methods = {
     "accuracy": 'accuracy',
     "precision": precision_scorer,
     "recall": recall_scorer,
-    "f1": f1_scorer
+    "f1": f1_scorer,
+    "f2": f2_scorer
 }
-
 # %%
-# Implementation
+# Training classifiers
+
+X_subsampling = new_df_train.drop('Class', axis=1)
+y_subsampling = new_df_train['Class']
+
 results_cv_sk = [[] for _ in range(len(classifiers))]
 
-for i, clf in enumerate(clf_test):
-    print (clf.__class__.__name__)
-
+for i, clf in enumerate(classifiers):
     for scoring_name, scoring in scoring_methods.items():
-        print(scoring_name)
-
-        scores = cross_val_score(clf, X, y,
+        # Cross-validation
+        scores = cross_val_score(clf, X_subsampling, y_subsampling,
                                  cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring=scoring)
         results_cv_sk[i].append(scores)
 
-results_cv_sk = np.array([np.array(scores).T for scores in results_cv_sk])
 
-print(results_cv_sk)
+#%%
+# Classifiers performance
+avg_scores = []
+
+for i, clf_results in enumerate(results_cv_sk):
+    clf_name = classifiers[i].__class__.__name__
+    print(f"Results for classifier: {clf_name}")
+
+    avg_clf_scores = {}
+    for j, score_set in enumerate(clf_results):
+        sc_np = np.array(score_set) 
+        mean_score = np.mean(sc_np) 
+
+        scoring_key = list(scoring_methods.keys())[j]
+        avg_clf_scores[scoring_key] = mean_score
+
+        print(f"Scoring method {list(scoring_methods.keys())[j]}: Mean = {mean_score}")
+    avg_scores.append((clf_name, avg_clf_scores))
+
+#%%
+#  Classifier comparison
+best_classifier = None
+best_score = -np.inf
+
+print("\nSummary of classifier performances:")
+for clf_name, scores in avg_scores:
+    avg_performance = np.mean(list(scores.values())) 
+    print(f"{clf_name}: Average performance across metrics = {avg_performance}")
+
+    if avg_performance > best_score:
+        best_score = avg_performance
+        best_classifier = clf_name
+
+print(f"\nBest classifier for validation set: {best_classifier} with an average score of {best_score}")
+
+#%%
+# Training and saving best classifier with joblib
+best_clf = None
+
+for clf in classifiers:
+    if clf.__class__.__name__ == best_classifier:
+        best_clf = clf
+        break
+
+if best_clf is None:
+    raise ValueError(f"Classifier {best_classifier} not found.")
+
+best_clf.fit(X_subsampling, y_subsampling)
+
+model_filename = f'./models/model_{best_clf.__class__.__name__}.joblib'
+dump(best_clf, model_filename)
+print(f"Model {best_clf.__class__.__name__} saved as {model_filename}")
+
+#%%
+# Final test (with previous test dataset taken from original dataframe)
+
+best_clf = load('./models/model_LR_undersampling.joblib')
+
+predictions = best_clf.predict(X_test)
+
+accuracy = accuracy_score(y_test, predictions)
+precision = precision_score(y_test, predictions, average='weighted')
+recall = recall_score(y_test, predictions, average='weighted')
+f1 = f1_score(y_test, predictions, average='weighted')
+f2 = fbeta_score(y_test, predictions, average='weighted', beta=2)
+
+
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision (weighted): {precision:.4f}")
+print(f"Recall (weighted): {recall:.4f}")
+print(f"F1 Score (weighted): {f1:.4f}")
+print(f"F2 Score (weighted): {f2:.4f}")
+
+
+# Business Plots - Performance before finetuning
+# Confusion Matrix
+cm = confusion_matrix(y_test, predictions)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", "Frauds"])
+disp.plot()
+
+plt.title(f"Confusion Matrix for {best_clf}")
+plt.savefig("./plots/undersmp_cm")
+
+#ROC Curve
+fpr, tpr, _ = roc_curve(y_test, best_clf.predict_proba(X_test)[:, 1])
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title(f'Receiver Operating Characteristic for {best_clf}')
+plt.legend(loc="lower right")
+plt.show()
+
+#Precision - Recall Curve
+precision, recall, _ = precision_recall_curve(y_test, best_clf.predict_proba(X_test)[:, 1])
+
+plt.step(recall, precision, where='post')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title(f'Precision-Recall curve for {best_clf}')
+plt.show()
 
 # %% 
 # Learning curves
-fig, ax = plt.subplots(nrows=1, ncols=len(clf_test), sharey=True, figsize=(30,10))
+fig, ax = plt.subplots(nrows=1, ncols=len(classifiers), sharey=True, figsize=(30,10))
 
-for i, clf in enumerate(clf_test):
-    LearningCurveDisplay.from_estimator(clf, X, y, 
+for i, clf in enumerate(classifiers):
+    LearningCurveDisplay.from_estimator(clf, X_subsampling, y_subsampling, 
                                         cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), 
                                         scoring=scoring_methods["accuracy"], ax=ax[i], n_jobs=1)
     ax[i].set_title(f"{clf.__class__.__name__}")
 
 fig.text(0.04, 0.5, 'Score', va='center', rotation='vertical')
 fig.suptitle('Learning Curves for Different Classifiers', fontsize=16)
-fig.tight_layout(rect=[0.05, 0.05, 1, 0.95])  # Adjust rect to make room for suptitle
+fig.tight_layout(rect=[0.05, 0.05, 1, 0.95])
 plt.savefig("./plots/lc.png")
 plt.show()
 
-# %%
-# Over-sampling technique
-for i, (train_index, test_index) in enumerate(sss.split(X, y)):
-    original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
-    original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
-    
-    for clf in clf_test:
-       pipeline = (SMOTE(sampling_strategy='auto', random_state=37, k_neighbors=5, n_jobs=-1), clf)
-       pipeline.fit(X_train, y_train)
+#%%
+#Hyperparameter Tuning for best classifier (The metric improve?)
 
-print(classification_report_imbalanced(y_test, pipeline.predict(X_test)))
+def f2_score(y_true, y_pred):
+    return fbeta_score(y_true, y_pred, beta=2)
+
+f2_scorer = make_scorer(f2_score)
+
+LogisticRegression_model = LogisticRegression(max_iter=7000)
+
+param_grid = {
+    'penalty': ['l2'],
+    'C': [1.0, 0.5, 0.1, 0.3, 0.7, 0.2, 0.4],
+    'class_weight': ['balanced', None],
+    'solver': ['lbfgs', 'liblinear', 'newton-cholesky'],
+}
+
+grid_search = GridSearchCV(estimator=LogisticRegression_model,
+                           param_grid=param_grid,
+                           scoring=f2_scorer,
+                           cv=5,
+                           n_jobs=-1,
+                           verbose=1)
+
+grid_search.fit(X_subsampling, y_subsampling)
+
+print(f"Best parameters: {grid_search.best_params_}")
+print(f"Best model: {grid_search.best_estimator_}")
+
+model_grid_search = grid_search.best_estimator_
+
+model_grid_search.fit(X_subsampling, y_subsampling)
+predictions_grid_search = best_clf.predict(X_test)
+
+
+accuracy = accuracy_score(y_test, predictions_grid_search)
+precision = precision_score(y_test, predictions_grid_search, average='weighted')
+recall = recall_score(y_test, predictions_grid_search, average='weighted')
+f1 = f1_score(y_test, predictions_grid_search, average='weighted')
+f2 = fbeta_score(y_test, predictions_grid_search, average='weighted', beta=2)
+
+
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision (weighted): {precision:.4f}")
+print(f"Recall (weighted): {recall:.4f}")
+print(f"F1 Score (weighted): {f1:.4f}")
+print(f"F2 Score (weighted): {f2:.4f}")
+
+cm = confusion_matrix(y_test, predictions_grid_search)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", "Frauds"])
+disp.plot()
+
+plt.title(f"Confusion Matrix for {model_grid_search}")
+plt.show()
+
+#ROC Curve
+fpr, tpr, _ = roc_curve(y_test, best_clf.predict_proba(X_test)[:, 1])
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title(f'Receiver Operating Characteristic for {best_clf}')
+plt.legend(loc="lower right")
+plt.show()
+
+#Precision - Recall Curve
+precision, recall, _ = precision_recall_curve(y_test, best_clf.predict_proba(X_test)[:, 1])
+
+plt.step(recall, precision, where='post')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title(f'Precision-Recall curve for {best_clf}')
+plt.show()
+
+# %%
+# Under and Over-sampling technique
+
+classifier = LogisticRegression(max_iter=7000)
+
+under = RandomUnderSampler(sampling_strategy=0.1)
+over = SMOTE(sampling_strategy='auto')
+x1, y1 = under.fit_resample(X_train, y_train)
+x2, y2 = over.fit_resample(x1,y1)
+Counter (y2)
+#%%
+pipeline = Pipeline(steps=[
+    ('under', RandomUnderSampler()),  
+    ('over', SMOTE()),            
+    ('classifier', LogisticRegression(max_iter=1000))
+])
+
+param_grid = {
+    'under__sampling_strategy': [0.003, 0.005, 0.1],  
+    'over__sampling_strategy': [0.1, 0.3, 0.5, 0.6],   
+    'classifier__penalty': ['l2'],
+    'classifier__C': [0.5, 0.1, 0.3, 0.2, 0.4, 1],
+    'classifier__class_weight': ['balanced', None],
+    'classifier__solver': ['lbfgs', 'liblinear', 'newton-cholesky'],
+}
+
+grid_search = GridSearchCV(pipeline, param_grid, scoring='recall', cv=5, n_jobs=-1)
+
+grid_search.fit(X_train, y_train)
+
+print("Best parameters:")
+print(grid_search.best_params_)
+
+model_filename = f'./models/model_{grid_search.__class__.__name__}.joblib'
+dump(best_clf, model_filename)
+print(f"Model {grid_search.__class__.__name__} saved as {model_filename}")
+
+# %%
+pipeline_training_data = Pipeline(steps=[
+    ('under', RandomUnderSampler(sampling_strategy=0.005)),  
+    ('over', SMOTE(sampling_strategy=0.1))
+])
+
+X_resampled, y_resampled = pipeline_training_data.fit_resample(X_train, y_train)
+
+print(f"Original dataset shape: {Counter(y_train)}")
+print(f"Resampled dataset shape: {Counter(y_resampled)}")
+# %%
+# Confusion Matrix
+
+best_classifier_unov = LogisticRegression(penalty='l2', C=0.1, class_weight=None, solver='liblinear')
+best_classifier_unov.fit(X_resampled,y_resampled)
+predictions_unov = best_classifier_unov.predict(X_test)
+
+cm = confusion_matrix(y_test, predictions_unov)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", "Frauds"])
+disp.plot()
+
+plt.title(f"Confusion Matrix for {best_classifier_unov}")
+plt.savefig("plots/unov_cm")
+
 # %%
