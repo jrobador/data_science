@@ -608,7 +608,7 @@ disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["No frauds", 
 disp.plot()
 
 plt.title(f"Confusion Matrix for {model_grid_search}")
-plt.savefig('./plots/cm_grid_search')
+plt.savefig('./plots/grid_search_cm')
 plt.show()
 
 #Precision - Recall Curve
@@ -618,7 +618,7 @@ plt.step(recall, precision, where='post')
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title(f'Precision-Recall curve for {best_clf}')
-plt.savefig('./plots/pr_grid_search')
+plt.savefig('./plots/grid_search_pr')
 plt.show()
 
 # %%
