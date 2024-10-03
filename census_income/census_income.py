@@ -120,9 +120,9 @@ for i, row in df.iterrows():
             if len(valid_occupations) > 0:
                 df.at[i, 'occupation'] = random.choice(valid_occupations)
             else: 
-                raise ValueError(f"No existe un valor mayor al umbral.")
+                raise ValueError(f"There is no value greater than the threshold.")
         else:
-            raise ValueError(f"El valor de 'workclass' no es válido: {workclass_value}")
+            raise ValueError(f"The value of 'workclass' is not valid: {workclass_value}")
 # %%
 # Now we check if there is any NaN for occupation (excluding Never-worked)
 print(df[df['workclass'] != 'Never-worked']['occupation'].isna().any())
@@ -142,9 +142,9 @@ for i, row in df.iterrows():
             if len(valid_workclasses) > 0:
                 df.at[i, 'workclass'] = random.choice(valid_workclasses)
             else: 
-                raise ValueError(f"No existe un valor mayor al umbral.")
+                raise ValueError(f"There is no value greater than the threshold.")
         else:
-            raise ValueError(f"El valor de 'occupation' no es válido: {workclass_value}")
+            raise ValueError(f"The value of 'occupation' is not  valid: {workclass_value}")
 
 # %%
 # Now we check if there is any NaN for workclass (excluding Never-worked)
@@ -155,5 +155,87 @@ print(df[df['workclass'] != 'Never-worked']['workclass'].isna().any())
 # Random Imputing - to mantain variability of our dataframe.
 categories = df['native-country'].dropna().unique()
 
-df['native-country'].fillna(pd.Series(np.random.choice(categories, size=df['native-country'].isnull().sum())), inplace=True)
+missing_mask = df['native-country'].isnull()
+#%%
+# Imputar valores aleatorios en los NaN
+df.loc[missing_mask, 'native-country'] = np.random.choice(categories, size=missing_mask.sum())
+
+#%%
+# Final check!
+print(df[df['workclass'] != 'Never-worked'].isna().any())
+
+#%%
+# 6. Inspecting continous data distribution
+
+X = df.drop('income', axis=1)
+y = df['income'] 
+
+# Age
+sns.histplot(x=X['age'], color='b', kde=True, linewidth=1.2, alpha=0.8)
+plt.title('Distribution of Age', fontsize=12)
+plt.xlabel('Age', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+if not os.path.exists('./census_income/plots/dist_age.png'):
+    plt.savefig('./census_income/plots/dist_age.png')
+plt.show()
+# %%
+# Final Weight
+sns.histplot(x=X['fnlwgt'], color='b', kde=True, linewidth=1.2, alpha=0.8)
+plt.title('Distribution of Final Weight', fontsize=12)
+plt.xlabel('Final Weight', fontsize=12)
+plt.xlim([min(X['fnlwgt'].values), max(X['fnlwgt'].values)])
+plt.ylabel('Frequency', fontsize=12)
+if not os.path.exists('./census_income/plots/dist_fnlwgt.png'):
+    plt.savefig('./census_income/plots/dist_fnlwgt.png')
+plt.show()
+#%%
+# Education num
+
+#¡Duplicated column!
+X.drop('education', axis=1)
+
+sns.histplot(x=X['education-num'], color='b', kde=True, linewidth=1.2, alpha=0.8)
+plt.title('Distribution of Education num', fontsize=12)
+plt.xlabel('Education num', fontsize=12)
+plt.xlim([min(X['education-num'].values), max(X['education-num'].values)])
+plt.ylabel('Frequency', fontsize=12)
+if not os.path.exists('./census_income/plots/dist_education-num.png'):
+    plt.savefig('./census_income/plots/dist_education-num.png')
+plt.show()
+# %%
+# capital-gain
+sns.histplot(x=X['capital-gain'], color='b', bins=100, kde=True, linewidth=1.2, alpha=0.8)
+plt.title('Distribution of Capital Gain', fontsize=12)
+plt.xlabel('Capital Gain', fontsize=12)
+plt.xlim([min(X['capital-gain'].values), max(X['capital-gain'].values)])
+plt.ylabel('Frequency', fontsize=12)
+if not os.path.exists('./census_income/plots/dist_capital-gain.png'):
+    plt.savefig('./census_income/plots/dist_capital-gain.png')
+plt.show()
+
+# %%
+# capital-loss
+sns.histplot(x=X['capital-loss'], color='b', bins=100, kde=True, linewidth=1.2, alpha=0.8)
+plt.title('Distribution of Capital Loss', fontsize=12)
+plt.xlabel('Capital Loss', fontsize=12)
+plt.xlim([min(X['capital-loss'].values), max(X['capital-loss'].values)])
+plt.ylabel('Frequency', fontsize=12)
+if not os.path.exists('./census_income/plots/dist_capital-loss.png'):
+    plt.savefig('./census_income/plots/dist_capital-loss.png')
+plt.show()
+# %%
+# hours-per-week
+sns.histplot(x=X['hours-per-week'], color='b', bins=100, kde=True, linewidth=1.2, alpha=0.8)
+plt.title('Distribution of Hours per week', fontsize=12)
+plt.xlabel('Hours per week', fontsize=12)
+plt.xlim([min(X['hours-per-week'].values), max(X['hours-per-week'].values)])
+plt.ylabel('Frequency', fontsize=12)
+if not os.path.exists('./census_income/plots/dist_hours-per-week.png'):
+    plt.savefig('./census_income/plots/dist_hours-per-week.png')
+plt.show()
+# %%
+# Compute variance of each continuous feature
+
+for col in ['hours-per-week', 'capital-loss', 'capital-gain', 'education-num', 'fnlwgt']:
+    print(f"{col} = {X[col].var()}")
 # %%
