@@ -7,8 +7,8 @@ import numpy as np
 import random
 
 import os
-os.makedirs('./plots', exist_ok=True)
-os.makedirs('./models', exist_ok=True)
+os.makedirs('./census_income/plots', exist_ok=True)
+os.makedirs('./census_income/models', exist_ok=True)
 
 #%%
 # fetch dataset 
