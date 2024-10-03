@@ -835,3 +835,8 @@ These findings underscore the importance of selecting appropriate metrics and te
 ## Useful links
 
 [Framework for Imbalanced Classification Projects](https://machinelearningmastery.com/framework-for-imbalanced-classification-projects/)
+
+[Interesting topic about decision threshold](https://scikit-learn.org/stable/modules/classification_threshold.html)
+
+[Cost Sensitive learning - Things to improve to this model](https://scikit-learn.org/stable/auto_examples/model_selection/plot_cost_sensitive_learning.html#cost-sensitive-learning-with-constant-gains-and-costs)
+
