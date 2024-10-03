@@ -103,25 +103,20 @@ threshold = 0.05
 mode_workclass = df['workclass'].mode()[0]
 
 for i, row in df.iterrows():
-    if pd.isna(row['occupation']):  # Solo actúa si 'occupation' es NaN
+    if pd.isna(row['occupation']):
         workclass_value = row['workclass']
         
-        # Si el valor de 'workclass' es NaN, reemplázalo con la moda
         if pd.isna(workclass_value):
             workclass_value = mode_workclass
             
-        # Si el valor de 'workclass' es "Never-worked", no realizar imputación
         if workclass_value == "Never-worked":
             continue
         
-        # Busca las probabilidades correspondientes de 'occupation' dado el 'workclass'
         if workclass_value in occupation_given_workclass.index:
             occupation_probs = occupation_given_workclass.loc[workclass_value] #Loc for a specific row
             
-            # Filtra las ocupaciones que superen el umbral
             valid_occupations = occupation_probs[occupation_probs > threshold].index
             
-            # Elige aleatoriamente una ocupación válida si hay al menos una opción
             if len(valid_occupations) > 0:
                 df.at[i, 'occupation'] = random.choice(valid_occupations)
             else: 
@@ -139,14 +134,11 @@ for i, row in df.iterrows():
     if pd.isna(row['workclass']):
         occupation_value = row['occupation']
 
-        # Busca las probabilidades correspondientes de 'occupation' dado el 'workclass'
         if occupation_value in workclass_given_occupation.columns:
             workclass_probs = workclass_given_occupation[occupation_value]  #No need for loc = Looking for columns      
             
-            # Filtra las ocupaciones que superen el umbral
             valid_workclasses = workclass_probs[workclass_probs > threshold].index
             
-            # Elige aleatoriamente una ocupación válida si hay al menos una opción
             if len(valid_workclasses) > 0:
                 df.at[i, 'workclass'] = random.choice(valid_workclasses)
             else: 
