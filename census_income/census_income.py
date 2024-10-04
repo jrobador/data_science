@@ -1,4 +1,8 @@
 #%%
+import os
+os.makedirs('./census_income/plots', exist_ok=True)
+os.makedirs('./census_income/models', exist_ok=True)
+
 from ucimlrepo import fetch_ucirepo 
 import pandas as pd
 import seaborn as sns
@@ -6,9 +10,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-import os
-os.makedirs('./census_income/plots', exist_ok=True)
-os.makedirs('./census_income/models', exist_ok=True)
+from sklearn.preprocessing import RobustScaler, OneHotEncoder
+from sklearn.model_selection import train_test_split 
+
+from imblearn.pipeline import Pipeline
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.over_sampling import SMOTE 
+
+from collections import Counter
+
+from sklearn.ensemble import RandomForestClassifier
+
+
 
 #%%
 # fetch dataset 
@@ -19,14 +32,9 @@ print(adult.metadata)
   
 # variable information 
 print(adult.variables) 
-
-# data (as pandas dataframes) 
-X = adult.data.features 
-y = adult.data.targets 
-
 # %%
 # Let's join our dataframe to a better analysis
-df = pd.concat([X,y], axis=1)
+df = pd.concat([adult.data.features,adult.data.targets], axis=1)
   
 # %%
 # First sense of dataset
@@ -169,73 +177,120 @@ print(df[df['workclass'] != 'Never-worked'].isna().any())
 
 X = df.drop('income', axis=1)
 y = df['income'] 
-
-# Age
-sns.histplot(x=X['age'], color='b', kde=True, linewidth=1.2, alpha=0.8)
-plt.title('Distribution of Age', fontsize=12)
-plt.xlabel('Age', fontsize=12)
-plt.ylabel('Frequency', fontsize=12)
-if not os.path.exists('./census_income/plots/dist_age.png'):
-    plt.savefig('./census_income/plots/dist_age.png')
-plt.show()
-# %%
-# Final Weight
-sns.histplot(x=X['fnlwgt'], color='b', kde=True, linewidth=1.2, alpha=0.8)
-plt.title('Distribution of Final Weight', fontsize=12)
-plt.xlabel('Final Weight', fontsize=12)
-plt.xlim([min(X['fnlwgt'].values), max(X['fnlwgt'].values)])
-plt.ylabel('Frequency', fontsize=12)
-if not os.path.exists('./census_income/plots/dist_fnlwgt.png'):
-    plt.savefig('./census_income/plots/dist_fnlwgt.png')
-plt.show()
-#%%
-# Education num
-
 #¡Duplicated column!
 X.drop('education', axis=1)
 
-sns.histplot(x=X['education-num'], color='b', kde=True, linewidth=1.2, alpha=0.8)
-plt.title('Distribution of Education num', fontsize=12)
-plt.xlabel('Education num', fontsize=12)
-plt.xlim([min(X['education-num'].values), max(X['education-num'].values)])
-plt.ylabel('Frequency', fontsize=12)
-if not os.path.exists('./census_income/plots/dist_education-num.png'):
-    plt.savefig('./census_income/plots/dist_education-num.png')
-plt.show()
+numerical_features = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+num_variance = {}
+for feature in (numerical_features):
+    plt.figure(figsize=(8, 5)) 
+    sns.histplot(x=X[feature], color='b', kde=True, linewidth=1.2, alpha=1)
+    
+    plt.xlabel(feature.replace('-', ' ').capitalize(), fontsize=12)
+    plt.ylabel('Frequency', fontsize=12)
+    plt.xlim([min(X[feature].values), max(X[feature].values)])
+    
+    filename = "dist_" + feature + ".png"
+    file_path = os.path.join('./census_income/plots', filename)
+    if not os.path.exists(file_path):
+        plt.savefig(file_path)
+    plt.show()
+
+    num_variance[feature] = X[feature].var()
+#%%
+# Print variance
+for key, value in zip(num_variance.keys(), num_variance.values()):
+    print (f"{key}={value:.2f}")
 # %%
-# capital-gain
-sns.histplot(x=X['capital-gain'], color='b', bins=100, kde=True, linewidth=1.2, alpha=0.8)
-plt.title('Distribution of Capital Gain', fontsize=12)
-plt.xlabel('Capital Gain', fontsize=12)
-plt.xlim([min(X['capital-gain'].values), max(X['capital-gain'].values)])
-plt.ylabel('Frequency', fontsize=12)
-if not os.path.exists('./census_income/plots/dist_capital-gain.png'):
-    plt.savefig('./census_income/plots/dist_capital-gain.png')
+# 7. Inspecting categories data distribution
+# %%
+categorical_features = ['workclass', 'education', 'marital-status', 'occupation', 
+                        'relationship', 'race', 'sex', 'native-country']
+
+for feature in (categorical_features):
+    plt.figure(figsize=(8, 5))
+    sns.countplot(y=feature, data=df, order=df[feature].value_counts().index)
+    plt.tight_layout()
+
+    filename = "cplot_" + feature + ".png"
+    file_path = os.path.join('./census_income/plots', filename)
+    if not os.path.exists(file_path):
+        plt.savefig(file_path)
+    plt.show()
+# %%
+# 8. Normalizating numerical features
+X[numerical_features] = RobustScaler().fit_transform(X[numerical_features])
+# %%
+# 9. Codifying categorical features
+encoder = OneHotEncoder(sparse_output=False, drop='first', handle_unknown='ignore')  # drop='first' para evitar la multicolinealidad
+encoded_categorical = encoder.fit_transform(X[categorical_features])
+
+encoded_X = pd.DataFrame(encoded_categorical, columns=encoder.get_feature_names_out(categorical_features))
+
+X = X.drop(columns=categorical_features).reset_index(drop=True)
+encoded_X = encoded_X.reset_index(drop=True)
+X = pd.concat([X, encoded_X], axis=1)
+# %%
+X.head()
+# 10. Analyzing target distribution - TO-DO!
+# ¡First curate the bad target names! 
+y = y.str.replace('.','', regex=False)
+y = y.map({'<=50K': 0, '>50K': 1})
+
+#%%
+# 11. Splitting original dataframe
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=37)
+# %%
+# 12. Under-sampling and over-sampling pipeline
+data_pipeline = Pipeline(steps=[
+    ('under', RandomUnderSampler(sampling_strategy=0.5)),  
+    ('over', SMOTE()),            
+])
+X_resampled, y_resampled = data_pipeline.fit_resample(X_train, y_train)
+# %%
+# 13. Correlation matrix - 98 columns, unreadable plot
+resampled_data = pd.DataFrame(X_resampled, columns=X_train.columns) 
+resampled_data['target'] = y_resampled
+#%%
+correlation_matrix_l = resampled_data.corr(method='pearson', min_periods=1, numeric_only=False)
+
+plt.figure(figsize=(12, 8))
+sns.heatmap(correlation_matrix_l, annot=True, fmt=".2f", cmap='coolwarm', cbar=True)
+plt.title('Correlation Matrix between Features and Target')
+if not os.path.exists('./census_income/plots/bad_cm.png'):
+    plt.savefig('./census_income/plots/bad_cm.png')
 plt.show()
 
-# %%
-# capital-loss
-sns.histplot(x=X['capital-loss'], color='b', bins=100, kde=True, linewidth=1.2, alpha=0.8)
-plt.title('Distribution of Capital Loss', fontsize=12)
-plt.xlabel('Capital Loss', fontsize=12)
-plt.xlim([min(X['capital-loss'].values), max(X['capital-loss'].values)])
-plt.ylabel('Frequency', fontsize=12)
-if not os.path.exists('./census_income/plots/dist_capital-loss.png'):
-    plt.savefig('./census_income/plots/dist_capital-loss.png')
-plt.show()
-# %%
-# hours-per-week
-sns.histplot(x=X['hours-per-week'], color='b', bins=100, kde=True, linewidth=1.2, alpha=0.8)
-plt.title('Distribution of Hours per week', fontsize=12)
-plt.xlabel('Hours per week', fontsize=12)
-plt.xlim([min(X['hours-per-week'].values), max(X['hours-per-week'].values)])
-plt.ylabel('Frequency', fontsize=12)
-if not os.path.exists('./census_income/plots/dist_hours-per-week.png'):
-    plt.savefig('./census_income/plots/dist_hours-per-week.png')
-plt.show()
-# %%
-# Compute variance of each continuous feature
+#%%
+# 14. Feature selection - Random Forest Classifier
+feature_selector = RandomForestClassifier(random_state=37)
+feature_selector.fit(X_resampled, y_resampled)
+feature_importances = pd.Series(feature_selector.feature_importances_, index=X_train.columns)
+top_features = feature_importances.nlargest(20)
 
-for col in ['hours-per-week', 'capital-loss', 'capital-gain', 'education-num', 'fnlwgt']:
-    print(f"{col} = {X[col].var()}")
+plt.figure(figsize=(10, 6))
+top_features.plot(kind='barh', title='Top 20 Most Important Features')
+if not os.path.exists('./census_income/plots/top_features.png'):
+    plt.savefig('./census_income/plots/top_features.png')
+plt.show()
+
+#%% 15. New correlation matrix - Top features. Good information
+
+correlation_data = resampled_data[top_features.index.tolist() + ['target']]
+correlation_matrix_w = correlation_data.corr()
+
+plt.figure(figsize=(12, 8))
+sns.heatmap(correlation_matrix_w, annot=True, fmt=".2f", cmap='coolwarm', cbar=True)
+plt.title('Correlation Matrix between TOP Features and Target', fontsize=15)
+if not os.path.exists('./census_income/plots/good_cm.png'):
+    plt.savefig('./census_income/plots/good_cm.png')
+plt.show()
+#%%
+# 14. Dimensionality Analysis
+
+# 15. Classifiers
+
+# 16. CV evaluation
+
+# 17. Final Model
 # %%
