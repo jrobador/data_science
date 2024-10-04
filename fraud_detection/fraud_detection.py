@@ -337,8 +337,6 @@ data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform((new_df
 fig = plt.figure(facecolor="white", constrained_layout=True)
 ax = fig.add_subplot(projection="3d")
 
-
-sc0, sc1, sc2 = data_embedded_TSNE[:,0], data_embedded_TSNE[:,1], data_embedded_TSNE[:,2]
 y_drc = new_df_train['Class']
 
 ax.scatter(data_embedded_TSNE[(y_drc == 0),0], data_embedded_TSNE[(y_drc == 0),1], data_embedded_TSNE[(y_drc == 0),2], c='yellow', label="Non Fraud")
