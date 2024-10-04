@@ -4,25 +4,34 @@ os.makedirs('./census_income/plots', exist_ok=True)
 os.makedirs('./census_income/models', exist_ok=True)
 
 from ucimlrepo import fetch_ucirepo 
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.manifold import TSNE
 from sklearn.preprocessing import RobustScaler, OneHotEncoder
-from sklearn.model_selection import train_test_split 
-
-from imblearn.pipeline import Pipeline
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.over_sampling import SMOTE 
-
-from collections import Counter
+from sklearn.metrics import accuracy_score
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 
+from xgboost import XGBClassifier
 
+from imblearn.pipeline import Pipeline
+from imblearn.under_sampling import RandomUnderSampler, ClusterCentroids
+from imblearn.over_sampling import SMOTE 
 
+from sklearn.model_selection import GridSearchCV
+
+from collections import Counter
+import time
+import pickle
 #%%
 # fetch dataset 
 adult = fetch_ucirepo(id=2) 
@@ -176,7 +185,7 @@ print(df[df['workclass'] != 'Never-worked'].isna().any())
 # 6. Inspecting continous data distribution
 
 X = df.drop('income', axis=1)
-y = df['income'] 
+
 #¡Duplicated column!
 X.drop('education', axis=1)
 
@@ -232,27 +241,43 @@ encoded_X = encoded_X.reset_index(drop=True)
 X = pd.concat([X, encoded_X], axis=1)
 # %%
 X.head()
-# 10. Analyzing target distribution - TO-DO!
+# 10. Analyzing target distribution
 # ¡First curate the bad target names! 
-y = y.str.replace('.','', regex=False)
+df['income'] = df['income'].str.replace('.','', regex=False)
+y = df['income'] 
 y = y.map({'<=50K': 0, '>50K': 1})
+
+plt.figure(figsize=(12, 8))
+sns.countplot(data=df, x='income')
+if not os.path.exists('./census_income/plots/income_unbalanced_distr.png'):
+    plt.savefig('./census_income/plots/income_unbalanced_distr.png')
+plt.show()
 
 #%%
 # 11. Splitting original dataframe
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=37)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=37, stratify=y)
 # %%
 # 12. Under-sampling and over-sampling pipeline
 data_pipeline = Pipeline(steps=[
-    ('under', RandomUnderSampler(sampling_strategy=0.5)),  
-    ('over', SMOTE()),            
+    ('under', RandomUnderSampler(random_state=37)),  
+    ('over', SMOTE(random_state=37)),            
 ])
 X_resampled, y_resampled = data_pipeline.fit_resample(X_train, y_train)
 # %%
-# 13. Correlation matrix - 98 columns, unreadable plot
-resampled_data = pd.DataFrame(X_resampled, columns=X_train.columns) 
-resampled_data['target'] = y_resampled
+# 13. New distribution is...
+resampled_data_train = pd.DataFrame(X_resampled, columns=X_train.columns) 
+resampled_data_train['target'] = y_resampled
+
+plt.figure(figsize=(12, 8))
+count_plot = sns.countplot(data=resampled_data_train, x='target')
+count_plot.set_xticklabels(['<=50K', '>50K'])
+plt.xlabel('income')
+if not os.path.exists('./census_income/plots/income_balanced_distr.png'):
+    plt.savefig('./census_income/plots/income_balanced_distr.png')
+plt.show()
 #%%
-correlation_matrix_l = resampled_data.corr(method='pearson', min_periods=1, numeric_only=False)
+# 14. Correlation matrix - 98 columns, unreadable plot
+correlation_matrix_l = resampled_data_train.corr(method='pearson', min_periods=1, numeric_only=False)
 
 plt.figure(figsize=(12, 8))
 sns.heatmap(correlation_matrix_l, annot=True, fmt=".2f", cmap='coolwarm', cbar=True)
@@ -262,11 +287,15 @@ if not os.path.exists('./census_income/plots/bad_cm.png'):
 plt.show()
 
 #%%
-# 14. Feature selection - Random Forest Classifier
+# 15. Feature selection - Random Forest Classifier
 feature_selector = RandomForestClassifier(random_state=37)
 feature_selector.fit(X_resampled, y_resampled)
 feature_importances = pd.Series(feature_selector.feature_importances_, index=X_train.columns)
 top_features = feature_importances.nlargest(20)
+
+if not os.path.exists('./census_income/models/top_features.pkl'):
+    with open('./census_income/models/top_features.pkl', 'wb') as f:
+        pickle.dump(top_features, f)
 
 plt.figure(figsize=(10, 6))
 top_features.plot(kind='barh', title='Top 20 Most Important Features')
@@ -274,9 +303,8 @@ if not os.path.exists('./census_income/plots/top_features.png'):
     plt.savefig('./census_income/plots/top_features.png')
 plt.show()
 
-#%% 15. New correlation matrix - Top features. Good information
-
-correlation_data = resampled_data[top_features.index.tolist() + ['target']]
+#%% 16. New correlation matrix - Top features. Good information
+correlation_data = resampled_data_train[top_features.index.tolist() + ['target']]
 correlation_matrix_w = correlation_data.corr()
 
 plt.figure(figsize=(12, 8))
@@ -286,11 +314,94 @@ if not os.path.exists('./census_income/plots/good_cm.png'):
     plt.savefig('./census_income/plots/good_cm.png')
 plt.show()
 #%%
-# 14. Dimensionality Analysis
+# 17. Dimensionality Visualization
+# t-SNE
+data_embedded_TSNE = TSNE(n_components=2, random_state=37).fit_transform(X_resampled)
 
+fig = plt.figure(facecolor="white", constrained_layout=True)
+ax = fig.add_subplot()
+
+ax.scatter(data_embedded_TSNE[(y_resampled == 0),0], data_embedded_TSNE[(y_resampled == 0),1], c='yellow',  label="<=50K")
+ax.scatter(data_embedded_TSNE[(y_resampled == 1),0], data_embedded_TSNE[(y_resampled == 1),1], c='blue',    label=">50K")
+
+ax.legend()
+
+ax.set_title('t-SNE')
+ax.grid(True)
+
+if not os.path.exists('./census_income/plots/t-SNE.png'):
+    plt.savefig('./census_income/plots/t-SNE.png')
+plt.show() 
+#%%
 # 15. Classifiers
 
-# 16. CV evaluation
+classifiers = [
+    ('Random Forest', RandomForestClassifier(random_state=37)),
+    ('SVM (non-linear)', SVC(kernel='rbf', random_state=37)),
+    ('Logistic Regression', LogisticRegression(max_iter=5000, random_state=37)),
+    ('XGBoost', XGBClassifier(random_state=37))
+]
 
+# Trained with top features only
+top_features_X_train = resampled_data_train[top_features.index.tolist()]
+
+#%%
+acc_scores = []
+for name, clf in (classifiers):
+    print (f"Evaluating {name}!")
+    # Cross-validation
+    score = cross_val_score(clf, top_features_X_train, y_resampled,
+                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
+    acc_scores.append((name, score.mean()))    
+
+print(acc_scores)
+
+#%%
+#Find best classifier
+best = ['', 0]
+for name, score in acc_scores:
+    if score > best[1]:
+        best[0] = name
+        best[1] = score
+        
+#%%
+# 16. Grid Search CV
+resampled_data_test = pd.DataFrame(X_test, columns=X_test.columns) 
+top_features_X_test = resampled_data_test[top_features.index.tolist()]
+
+xgb_cpu = XGBClassifier(random_state=37)
+
+param_grid = {
+    'n_estimators': [50, 80],         
+    'max_depth': [15, 20],               
+    'learning_rate': [0.1],
+    'subsample': [0.8, 1],           
+    'colsample_bytree': [0.8],         
+    'gamma': [0, 0.3, 0.6],                                
+}
+
+grid_search = GridSearchCV(estimator=xgb_cpu,
+                           param_grid=param_grid,
+                           cv=3,               
+                           scoring='accuracy', 
+                           verbose=1,          
+                           n_jobs=-1)          
+
+start = time.time()
+grid_search.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)], verbose=True)
+print("CPU GridSearchCV Time: %s seconds" % (str(time.time() - start)))
+
+print(f"{grid_search.best_params_=}")
+print(f"{grid_search.best_score_}")
+
+# %%
 # 17. Final Model
+xgb_final_model = XGBClassifier(random_state=37)
+xgb_final_model.fit(X_train, y_train,  eval_set=[(X_test, y_test)], verbose=True)
+xgb_final_model.evals_result()
+
+#%%
+predictions = xgb_final_model.predict(X_test)
+# %%
+accuracy_score(y_test, predictions)
 # %%
