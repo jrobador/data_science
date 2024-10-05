@@ -29,11 +29,13 @@ from imblearn.over_sampling import SMOTE
 
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
-from imblearn.metrics import classification_report_imbalanced
-
 from collections import Counter
 import time
+
 import pickle
+from joblib import dump
+
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc
 #%%
 # fetch dataset 
 adult = fetch_ucirepo(id=2) 
@@ -425,15 +427,84 @@ best_score = cross_val_score(best_clf, top_features_X_train, y_resampled,
 print(best_score)
 # %%
 # 22. Train and save our best model
-xgb_final_model = XGBClassifier(random_state=37, n_estimators=200)
-xgb_final_model.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)])
+best_clf.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)])
+if not os.path.exists('./census_income/models/model_LR_undersampling.joblib'):
+    dump(best_clf, './census_income/models/model_LR_undersampling.joblib')
 #%%
 # 23. Testing best model with test set
-y_train_pred = xgb_final_model.predict(top_features_X_train)
+y_train_pred = best_clf.predict(top_features_X_train)
 train_accuracy = accuracy_score(y_resampled, y_train_pred)
 
-y_test_pred = xgb_final_model.predict(top_features_X_test)
+y_test_pred = best_clf.predict(top_features_X_test)
 test_accuracy = accuracy_score(y_test, y_test_pred)
 
 print(f"Train Accuracy: {train_accuracy}")
 print(f"Test Accuracy: {test_accuracy}")
+# %%
+# 23. Business Plots!
+
+# Accuracy barplot
+accuracies = [best_score.mean(), test_accuracy]
+labels = ['CV Accuracy', 'Test Accuracy']
+
+plt.figure(figsize=(8, 6))
+bar_plot = sns.barplot(x=labels, y=accuracies, palette="cividis", edgecolor='black')
+
+plt.ylim(0, 1)
+plt.title('Model Accuracy Comparison', fontsize=16)
+plt.ylabel('Accuracy', fontsize=12)
+plt.xlabel('Dataset', fontsize=12)
+
+for p in bar_plot.patches:
+    bar_plot.annotate(f'{p.get_height():.2%}', (p.get_x() + p.get_width() / 2., p.get_height()), 
+                      ha='center', va='bottom', fontsize=12)
+    
+plt.tight_layout()
+if not os.path.exists('./census_income/plots/results_model_accuracy.png'):
+    plt.savefig('./census_income/plots/results_model_accuracy.png')    
+plt.show()
+
+#%%
+# Confusion Matrix
+conf_matrix = confusion_matrix(y_test, y_test_pred)
+
+conf_matrix_normalized = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix_normalized, annot=True, fmt=".2%", cmap="cividis", cbar=False,
+            xticklabels=["<=50K", ">50K"], yticklabels=["<=50K", ">50K"], linewidths=1, linecolor='black')
+
+plt.title('Confusion Matrix (Normalized)', fontsize=16)
+plt.ylabel('True Label', fontsize=12)
+plt.xlabel('Predicted Label', fontsize=12)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+
+accuracy_text = f'Accuracy: {test_accuracy:.2%}'
+plt.gcf().text(0.80, 0.88, accuracy_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+
+plt.tight_layout()
+if not os.path.exists('./census_income/plots/results_cm.png'):
+    plt.savefig('./census_income/plots/results_cm.png')
+plt.show()
+
+# %%
+# ROC - AUC
+y_test_prob = best_clf.predict_proba(top_features_X_test)[:, 1]
+
+fpr, tpr, thresholds = roc_curve(y_test, y_test_prob)
+roc_auc = auc(fpr, tpr)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='darkkhaki', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate', fontsize=12)
+plt.ylabel('True Positive Rate', fontsize=12)
+plt.title('Receiver Operating Characteristic (ROC) Curve', fontsize=16)
+plt.legend(loc="lower right")
+if not os.path.exists('./census_income/plots/results_roc.png'):
+    plt.savefig('./census_income/plots/results_roc.png')
+plt.show()
+# %%
