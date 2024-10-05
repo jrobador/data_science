@@ -1,6 +1,6 @@
 # Census Income
 
-[Dataset Link](https://archive.ics.uci.edu/dataset/2/adult)
+[[“Adult Data Set”, UCI Machine Learning Repository]](https://archive.ics.uci.edu/dataset/2/adult)
 
 Prediction task is to determine whether a person's income is over $50,000 a year.
 
@@ -116,27 +116,27 @@ As we saw in our "First sense of the dataset", the features are categorical and 
  Estas gráficas te permiten ver si los datos están sesgados, tienen valores atípicos, o si siguen una distribución normal. Nos sirve para realizar la normalización antes de proceder con el análisis de clasificación.
 
 ### Age
-[Age dist](./plots/dist_age.png)
+![Age dist](./plots/dist_age.png)
 This feature doesn't look too skewed.
 
 ### Final Weight
-[FW dist](./plots/dist_fnlwgt.png)
+![FW dist](./plots/dist_fnlwgt.png)
 Skewness: The distribution of the fnlwgt column is skewed, meaning it has a long tail on one side. This can often lead to outliers.
 
 ### Education num
-[EN dist](./plots/dist_education-num.png)
+![EN dist](./plots/dist_education-num.png)
 Education num is just a numeric encoding column of the string-encoded format column. To avoid feeding our classifier with this data twice, we must delete either this numbers column or the string-encoded column. I prefer to keep the numbers column. This feature doesn't look too skewed.
 
 ### Capital gain
-[Cg dist](./plots/dist_capital-gain.png)
+![Cg dist](./plots/dist_capital-gain.png)
 Skewness: The distribution of the capital-gain column is skewed, meaning it has a long tail on one side. This can often lead to outliers.
 
 ### Capital loss
-[Cl dist](./plots/dist_capital-loss.png)
+![Cl dist](./plots/dist_capital-loss.png)
 Skewness: The distribution of the capital-gain column is skewed, meaning it has a long tail on one side. This can often lead to outliers.
 
 ### Hours per week
-[hpw dist](./plots/dist_hours-per-week.png)
+![hpw dist](./plots/dist_hours-per-week.png)
 Hours per week doesn't look skewed.
 
 ### Analysis
@@ -165,7 +165,7 @@ One hot encoding
 ## Target distribution
 Primero = Parchamos las categorias que estan mal: 4 categorias: "<=50K", "<=50K.", ">50K", ">50K."
 
-[Unbalanced Distribution](./plots/income_unbalanced_distr.png)
+![Unbalanced Distribution](./plots/income_unbalanced_distr.png)
 
 Hablar que esta mal
 
@@ -175,17 +175,17 @@ data_pipeline = Pipeline(steps=[
     ('over', SMOTE()),            
 ])
 
-[Balanced Distribution](./plots/income_balanced_distr.png)
+![Balanced Distribution](./plots/income_balanced_distr.png)
 
 ## Correlation Matrix
 
 Note: We have to make sure we use the subsample in our correlation matrix or else our correlation matrix will be affected by the high imbalance between our classes. This occurs due to the high class imbalance in the original dataframe.
-[CM Bad](./plots/bad_cm.png)
+![CM Bad](./plots/bad_cm.png)
 
 ### Feature Engineerined
 ![TF](./plots/top_features.png)
 
-![CM Bad](./plots/good_cm.png)
+![CM Good](./plots/good_cm.png)
 
 ### Correlation Analysis
 
