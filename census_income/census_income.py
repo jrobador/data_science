@@ -27,7 +27,9 @@ from imblearn.pipeline import Pipeline
 from imblearn.under_sampling import RandomUnderSampler, ClusterCentroids
 from imblearn.over_sampling import SMOTE 
 
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+
+from imblearn.metrics import classification_report_imbalanced
 
 from collections import Counter
 import time
@@ -173,8 +175,7 @@ print(df[df['workclass'] != 'Never-worked']['workclass'].isna().any())
 categories = df['native-country'].dropna().unique()
 
 missing_mask = df['native-country'].isnull()
-#%%
-# Imputar valores aleatorios en los NaN
+
 df.loc[missing_mask, 'native-country'] = np.random.choice(categories, size=missing_mask.sum())
 
 #%%
@@ -259,7 +260,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # %%
 # 12. Under-sampling and over-sampling pipeline
 data_pipeline = Pipeline(steps=[
-    ('under', RandomUnderSampler(random_state=37)),  
+    ('under', RandomUnderSampler(sampling_strategy=0.5, random_state=37)),  
     ('over', SMOTE(random_state=37)),            
 ])
 X_resampled, y_resampled = data_pipeline.fit_resample(X_train, y_train)
@@ -303,7 +304,8 @@ if not os.path.exists('./census_income/plots/top_features.png'):
     plt.savefig('./census_income/plots/top_features.png')
 plt.show()
 
-#%% 16. New correlation matrix - Top features. Good information
+#%% 
+# 16. New correlation matrix - Top features. Good information
 correlation_data = resampled_data_train[top_features.index.tolist() + ['target']]
 correlation_matrix_w = correlation_data.corr()
 
@@ -333,18 +335,16 @@ if not os.path.exists('./census_income/plots/t-SNE.png'):
     plt.savefig('./census_income/plots/t-SNE.png')
 plt.show() 
 #%%
-# 15. Classifiers
-
+# 18. Classifiers
 classifiers = [
     ('Random Forest', RandomForestClassifier(random_state=37)),
-    ('SVM (non-linear)', SVC(kernel='rbf', random_state=37)),
+    ('SVC (non-linear)', SVC(kernel='rbf', random_state=37)),
     ('Logistic Regression', LogisticRegression(max_iter=5000, random_state=37)),
     ('XGBoost', XGBClassifier(random_state=37))
 ]
 
 # Trained with top features only
 top_features_X_train = resampled_data_train[top_features.index.tolist()]
-
 #%%
 acc_scores = []
 for name, clf in (classifiers):
@@ -355,9 +355,8 @@ for name, clf in (classifiers):
     acc_scores.append((name, score.mean()))    
 
 print(acc_scores)
-
 #%%
-#Find best classifier
+# Find best classifier
 best = ['', 0]
 for name, score in acc_scores:
     if score > best[1]:
@@ -365,12 +364,12 @@ for name, score in acc_scores:
         best[1] = score
         
 #%%
-# 16. Grid Search CV
+# 19. Grid Search CV
 resampled_data_test = pd.DataFrame(X_test, columns=X_test.columns) 
 top_features_X_test = resampled_data_test[top_features.index.tolist()]
-
 xgb_cpu = XGBClassifier(random_state=37)
 
+#%%
 param_grid = {
     'n_estimators': [50, 80],         
     'max_depth': [15, 20],               
@@ -388,20 +387,53 @@ grid_search = GridSearchCV(estimator=xgb_cpu,
                            n_jobs=-1)          
 
 start = time.time()
-grid_search.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)], verbose=True)
+grid_search.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)], verbose=False)
 print("CPU GridSearchCV Time: %s seconds" % (str(time.time() - start)))
 
 print(f"{grid_search.best_params_=}")
 print(f"{grid_search.best_score_}")
 
-# %%
-# 17. Final Model
-xgb_final_model = XGBClassifier(random_state=37)
-xgb_final_model.fit(X_train, y_train,  eval_set=[(X_test, y_test)], verbose=True)
-xgb_final_model.evals_result()
-
 #%%
-predictions = xgb_final_model.predict(X_test)
+# 20. RandomizedSearchCV
+param_dist = {
+    'n_estimators': np.arange(50, 300, 50),
+    'max_depth': np.arange(3, 10),
+    'learning_rate': np.linspace(0.01, 0.3, 10),
+    'subsample': [0.6, 0.8, 1.0],
+    'colsample_bytree': [0.6, 0.8, 1.0],
+    'gamma': np.linspace(0, 0.5, 5),
+    'reg_alpha': np.logspace(-3, 0, 5),
+    'reg_lambda': np.logspace(-1, 1, 5)
+}
+
+random_search = RandomizedSearchCV(estimator=xgb_cpu, param_distributions=param_dist, 
+                                   n_iter=50, scoring='accuracy', cv=5, verbose=1, random_state=42)
+
+start = time.time()
+random_search.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)], verbose=False)
+print("CPU RandomizedSearchCV Time: %s seconds" % (str(time.time() - start)))
+
+print(f"{random_search.best_params_=}")
+print(f"{random_search.best_score_}")
+#%%
+# 21. Cross-validation - best model
+best_params = random_search.best_params_ if random_search.best_score_ > grid_search.best_score_ else grid_search.best_params_
+
+best_clf = XGBClassifier(**best_params)
+best_score = cross_val_score(best_clf, top_features_X_train, y_resampled,
+                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
+print(best_score)
 # %%
-accuracy_score(y_test, predictions)
-# %%
+# 22. Train and save our best model
+xgb_final_model = XGBClassifier(random_state=37, n_estimators=200)
+xgb_final_model.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)])
+#%%
+# 23. Testing best model with test set
+y_train_pred = xgb_final_model.predict(top_features_X_train)
+train_accuracy = accuracy_score(y_resampled, y_train_pred)
+
+y_test_pred = xgb_final_model.predict(top_features_X_test)
+test_accuracy = accuracy_score(y_test, y_test_pred)
+
+print(f"Train Accuracy: {train_accuracy}")
+print(f"Test Accuracy: {test_accuracy}")
