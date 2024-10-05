@@ -139,17 +139,86 @@ Skewness: The distribution of the capital-gain column is skewed, meaning it has 
 [hpw dist](./plots/dist_hours-per-week.png)
 Hours per week doesn't look skewed.
 
-### Conclusions
-Knowing that the data is very skewed, with some outliers that can influence in our final prediction, we are going to keep that in mind to perform a good transformation to this data. We could either perform a logarithmic transformation or a robust scalation.
+### Analysis
+Knowing that the data is very skewed, with some outliers that could influence in our final prediction, we need a further inspection to know if they had a correlation with our target. Also, we are going to keep this skewing in mind to perform a good transformation to the data. We could either perform a logarithmic transformation or a robust scalation.
 
-## Categorical variables encoding
+## Continous data distribution
+![cp ed](./plots/cplot_education.png)
+![cp ms](./plots/cplot_marital-status.png)
+![cp nc](./plots/cplot_native-country.png)
+![cp occ](./plots/cplot_occupation.png)
+![cp rc](./plots/cplot_race.png)
+![cp rtn](./plots/cplot_relationship.png)
+![cp sx](./plots/cplot_sex.png)
+![cp wcls](./plots/cplot_workclass.png)
+
+### Analysis
+Obviously, the continuous also is not normalized and very skewed. For example 'native-country' is almost all United-States (of course, the census was made in the US...)
 
 ## Normalization of integer values
+RobustScaler
+
+## Categorical variables encoding
+One hot encoding
+(sparse_output=False, drop='first', handle_unknown='ignore')
+
+## Target distribution
+Primero = Parchamos las categorias que estan mal: 4 categorias: "<=50K", "<=50K.", ">50K", ">50K."
+
+[Unbalanced Distribution](./plots/income_unbalanced_distr.png)
+
+Hablar que esta mal
 
 ## Unbalanced dataset handling (Under and Over sampling)
+data_pipeline = Pipeline(steps=[
+    ('under', RandomUnderSampler(sampling_strategy=0.5)),  
+    ('over', SMOTE()),            
+])
+
+[Balanced Distribution](./plots/income_balanced_distr.png)
+
+## Correlation Matrix
+
+Note: We have to make sure we use the subsample in our correlation matrix or else our correlation matrix will be affected by the high imbalance between our classes. This occurs due to the high class imbalance in the original dataframe.
+[CM Bad](./plots/bad_cm.png)
+
+### Feature Engineerined
+![TF](./plots/top_features.png)
+
+![CM Bad](./plots/good_cm.png)
+
+### Correlation Analysis
+
+1. **Marital Status**:
+   * The variable `marital-status_Married-civ-spouse` has a high positive correlation with the target (0.54), suggesting that married individuals are more likely to be in the `>50K` income group.
+   * On the other hand, `marital-status_Never-married` shows a negative correlation (−0.41), indicating that these individuals are less likely to belong to the higher income group.
+
+2. **Age and Hours Worked**:
+   * `age` and `hours-per-week` have moderate positive correlations (0.28 and 0.27 respectively), indicating that as age and hours worked increase, so does the probability of belonging to the `>50K` group.
+
+3. **Education**:
+   * `education-num` has a significant positive correlation (0.39), suggesting that a higher level of education is associated with a greater probability of earning more than 50K.
+   * `education_Bachelors` also shows a positive correlation (0.20), reinforcing the relationship between education and income level.
+
+4. **Gender**:
+   * `sex_Male` has a positive correlation (0.29), indicating that men tend to have a higher probability of being in the higher income group.
+
+5. **Other Variables**:
+   * Variables related to occupation and relationships with others (such as `relationship_Not-in-family`, `occupation_Other-service`, etc.) show negative correlations, suggesting that these categories may be associated with lower probabilities of high income.
 
 
+## Dimensionality Analysis with t-SNE 
+Note!
 
+t-SNE is not a direct indicator of linear or non-linear separability of the data, as its main objective is dimensional reduction for visualization, preserving local proximity relationships, not global ones.
+
+![t-SNE](./plots/t-SNE.png)
+
+In this plot, there is significant overlap between the points in the two classes, suggesting that a classifier might have difficulty finding a clear decision boundary between the “>50K” and “<=50K” classes. However, this does not mean that a model cannot achieve good classification. This is where techniques such as the use of nonlinear algorithms come into play.
+
+Although there is overlap, we also observe a dense concentration of blue points (>50K) in certain areas and the same for yellow points (<=50K), indicating that within certain regions there may be good separability. This suggests that a classifier can achieve good performance in parts of the data, but may be less effective in areas where classes are mixed.
+
+t-SNE does not preserve the structure of the high-dimensional data, so it is difficult to conclude whether the improvements observed in the graph will translate directly into improvements for the model.
 
 ## Clasification Task
 As our friends from [sci-kit learn](https://scikit-learn.org/stable/modules/classification_threshold.html) says:
@@ -160,3 +229,15 @@ As our friends from [sci-kit learn](https://scikit-learn.org/stable/modules/clas
 >
 > For binary classification in scikit-learn, class labels predictions are obtained by hard-coded cut-off rules: a positive class is predicted when the conditional probability is greater than 0.5 (obtained with predict_proba) or if the decision score is greater than 0 (obtained with decision_function).
 
+
+1. Explicar los clasificadores un poco, hablar mas de XGBoost.
+
+## XGBoost hyperparameters tuning
+
+## Results
+
+![rcm](./plots/results_cm.png)
+
+![rma](./plots/results_model_accuracy.png)
+
+![rroc](./plots/results_roc.png)
