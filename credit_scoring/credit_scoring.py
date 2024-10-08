@@ -252,7 +252,7 @@ XGB_model = XGBClassifier(random_state=37)
 
 # GridSearchCV
 grid_search = GridSearchCV(estimator=XGB_model, param_grid=param_grid, 
-                           scoring='accuracy', cv=5, verbose=1)
+                           scoring='accuracy', cv=3, verbose=1)
 
 start = time.time()
 grid_search.fit(X_oversampled, y_oversampled_target, eval_set=[(X_test, y_test_target)], verbose=False)
