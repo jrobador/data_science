@@ -11,7 +11,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import RobustScaler, OneHotEncoder
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, RandomizedSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+
 from sklearn.manifold import TSNE
 
 from imblearn.over_sampling import SMOTE
@@ -232,8 +234,36 @@ score = cross_val_score(XGB_model, X_oversampled, y_oversampled_target,
 
 print (f"Accuracy for CV: {score.mean()}")
 #%% 
-# GridSearch - RandomSearchCV
+# GridSearchCV
 y_test_target = y_test['class'].map({1: 0, 2: 1})
+
+param_grid = {
+    'n_estimators': [100, 150, 200],      
+    'max_depth': [4, 5, 6],               
+    'learning_rate': [0.1, 0.2],    
+    'subsample': [0.75, 0.8, 0.85],       
+    'colsample_bytree': [0.7, 0.75, 0.8], 
+    'gamma': [0.15, 0.2, 0.25],           
+    'min_child_weight': [2, 3, 4],        
+    
+}
+
+XGB_model = XGBClassifier(random_state=37)
+
+# GridSearchCV
+grid_search = GridSearchCV(estimator=XGB_model, param_grid=param_grid, 
+                           scoring='accuracy', cv=5, verbose=1)
+
+start = time.time()
+grid_search.fit(X_oversampled, y_oversampled_target, eval_set=[(X_test, y_test_target)], verbose=False)
+print("CPU GridSearchCV Time: %s seconds" % (str(time.time() - start)))
+
+# Print the best parameters and best score
+print(f"Best Parameters: {grid_search.best_params_}")
+print(f"Best Score: {grid_search.best_score_}")
+
+#%%
+# RandomSearchCV
 
 param_dist = {
     'n_estimators': np.arange(50, 300, 50),  
@@ -248,7 +278,7 @@ param_dist = {
 }
 
 random_search = RandomizedSearchCV(estimator=XGB_model, param_distributions=param_dist, 
-                                   n_iter=50, scoring='accuracy', cv=5, verbose=1, random_state=37)
+                                   n_iter=50, scoring='accuracy', cv=3, verbose=1, random_state=37)
 
 start = time.time()
 random_search.fit(X_oversampled, y_oversampled_target,  eval_set=[(X_test, y_test_target)], verbose=False)
