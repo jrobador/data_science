@@ -11,15 +11,19 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import RobustScaler, OneHotEncoder
-
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, RandomizedSearchCV
 from sklearn.manifold import TSNE
 
 from imblearn.over_sampling import SMOTE
 
+from xgboost import XGBClassifier
+
+from sklearn.metrics import accuracy_score, precision_score
+
+
+import time
 from collections import Counter
 
-from xgboost import XGBClassifier
 
 
 #%%
@@ -38,9 +42,7 @@ print(statlog_german_credit_data.metadata)
 print(statlog_german_credit_data.variables) 
 
 #%%
-from collections import Counter
 Counter(y['class'])
-
 #%%
 # 1. Dataset information
 df.head()
@@ -228,8 +230,54 @@ y_oversampled_target = y_oversampled['class'].map({1: 0, 2: 1})
 score = cross_val_score(XGB_model, X_oversampled, y_oversampled_target,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
 
+print (f"Accuracy for CV: {score.mean()}")
 #%% 
-# GridSearch - RandomSearch
+# GridSearch - RandomSearchCV
+y_test_target = y_test['class'].map({1: 0, 2: 1})
+
+param_dist = {
+    'n_estimators': np.arange(50, 300, 50),  
+    'max_depth': np.arange(3, 8),
+    'learning_rate': np.linspace(0.01, 0.3, 10), 
+    'subsample': np.linspace(0.6, 0.9, 4).tolist() + [1.0], 
+    'colsample_bytree': np.linspace(0.6, 0.9, 4).tolist() + [1.0],
+    'gamma': np.linspace(0, 0.5, 5),    
+    'min_child_weight': np.arange(1, 6),
+    'reg_alpha': np.logspace(-3, 0, 5), 
+    'reg_lambda': np.logspace(-1, 1, 5) 
+}
+
+random_search = RandomizedSearchCV(estimator=XGB_model, param_distributions=param_dist, 
+                                   n_iter=50, scoring='accuracy', cv=5, verbose=1, random_state=37)
+
+start = time.time()
+random_search.fit(X_oversampled, y_oversampled_target,  eval_set=[(X_test, y_test_target)], verbose=False)
+print("CPU RandomizedSearchCV Time: %s seconds" % (str(time.time() - start)))
+
+print(f"{random_search.best_params_=}")
+print(f"{random_search.best_score_}")
+
+#%%
+# Train with best results
+XGB_best_params = XGBClassifier(**random_search.best_params_)
+XGB_best_params.fit(X_oversampled, y_oversampled_target)
+
+#%%
+y_train_predict = XGB_best_params.predict(X_oversampled)
+y_test_predict  = XGB_best_params.predict(X_test)
+
+acc_train = accuracy_score(y_oversampled_target, y_train_predict)
+pre_train = precision_score(y_oversampled_target, y_train_predict)
+
+acc_test = accuracy_score(y_test_target, y_test_predict) 
+pre_test = precision_score(y_test_target,y_test_predict)
+
+#%%
+score = cross_val_score(XGB_best_params, X_oversampled, y_oversampled_target,
+                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
+print(score)
+#%%
+# Plot results
 
 #%%
 # Post-tuning the decision threshold for cost-sensitive learning
