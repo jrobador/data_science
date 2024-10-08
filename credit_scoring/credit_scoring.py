@@ -228,6 +228,7 @@ XGB_model = XGBClassifier(random_state=37)
 
 #1 was good, 2 was bad.
 y_oversampled_target = y_oversampled['class'].map({1: 0, 2: 1})
+y_test_target = y_test['class'].map({1: 0, 2: 1})
 
 score = cross_val_score(XGB_model, X_oversampled, y_oversampled_target,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
@@ -235,8 +236,6 @@ score = cross_val_score(XGB_model, X_oversampled, y_oversampled_target,
 print (f"Accuracy for CV: {score.mean()}")
 #%% 
 # GridSearchCV
-y_test_target = y_test['class'].map({1: 0, 2: 1})
-
 param_grid = {
     'n_estimators': [100, 150, 200],      
     'max_depth': [4, 5, 6],               
@@ -250,7 +249,6 @@ param_grid = {
 
 XGB_model = XGBClassifier(random_state=37)
 
-# GridSearchCV
 grid_search = GridSearchCV(estimator=XGB_model, param_grid=param_grid, 
                            scoring='accuracy', cv=3, verbose=1)
 
@@ -263,8 +261,20 @@ print(f"Best Parameters: {grid_search.best_params_}")
 print(f"Best Score: {grid_search.best_score_}")
 
 #%%
-# RandomSearchCV
+#CV for Grid Search best model
+gs_best_params = {'colsample_bytree': 0.8, 'gamma': 0.25, 'learning_rate': 0.2, 
+                  'max_depth': 6, 'min_child_weight': 2, 'n_estimators': 100, 
+                  'subsample': 0.8}
 
+XGB_grid_search = XGBClassifier(**gs_best_params, random_state=37)
+
+score = cross_val_score(XGB_grid_search, X_oversampled, y_oversampled_target,
+                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
+
+print (f"Accuracy for CV: {score.mean()}")
+
+#%%
+# RandomSearchCV
 param_dist = {
     'n_estimators': np.arange(50, 300, 50),  
     'max_depth': np.arange(3, 8),
@@ -288,8 +298,17 @@ print(f"{random_search.best_params_=}")
 print(f"{random_search.best_score_}")
 
 #%%
+# CV for Random Search best model
+XGB_random_search = XGBClassifier(**random_search.best_params_)
+
+score = cross_val_score(XGB_random_search, X_oversampled, y_oversampled_target,
+                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
+
+print (f"Accuracy for CV: {score.mean()}")
+
+#%%
 # Train with best results
-XGB_best_params = XGBClassifier(**random_search.best_params_)
+XGB_best_params = XGBClassifier(random_state=37)
 XGB_best_params.fit(X_oversampled, y_oversampled_target)
 
 #%%
@@ -299,13 +318,18 @@ y_test_predict  = XGB_best_params.predict(X_test)
 acc_train = accuracy_score(y_oversampled_target, y_train_predict)
 pre_train = precision_score(y_oversampled_target, y_train_predict)
 
+print(f"{acc_train=}, {pre_train=}")
+
 acc_test = accuracy_score(y_test_target, y_test_predict) 
 pre_test = precision_score(y_test_target,y_test_predict)
+
+print(f"{acc_test=}, {pre_test=}")
 
 #%%
 score = cross_val_score(XGB_best_params, X_oversampled, y_oversampled_target,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
-print(score)
+print(score.mean())
+
 #%%
 # Plot results
 
