@@ -20,12 +20,12 @@ from imblearn.over_sampling import SMOTE
 
 from xgboost import XGBClassifier
 
-from sklearn.metrics import accuracy_score, precision_score
-
+from sklearn.metrics import accuracy_score, precision_score, confusion_matrix, roc_curve, auc
 
 import time
 from collections import Counter
 
+from joblib import dump
 
 
 #%%
@@ -187,7 +187,6 @@ for feature in correlation_matrix_l.columns:
 
 #%%
 # Correlation inspection
-
 sns.boxplot(x="class", y=pos_cor_feat[0], data=df_oversampled)
 plt.title(f'{pos_cor_feat[0]} vs Class Positive Correlation')
 plt.tight_layout()
@@ -299,18 +298,21 @@ print(f"{random_search.best_score_}")
 
 #%%
 # CV for Random Search best model
-XGB_random_search = XGBClassifier(**random_search.best_params_)
+XGB_random_search = XGBClassifier(**random_search.best_params_, random_state=37)
 
 score = cross_val_score(XGB_random_search, X_oversampled, y_oversampled_target,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
 
 print (f"Accuracy for CV: {score.mean()}")
 
+#Model didn't improve neither with GS or RS.
 #%%
 # Train with best results
 XGB_best_params = XGBClassifier(random_state=37)
 XGB_best_params.fit(X_oversampled, y_oversampled_target)
 
+if not os.path.exists('./credit_scoring/models/XGB_model.joblib'):
+    dump(XGB_best_params, './credit_scoring/models/XGB_model.joblib')
 #%%
 y_train_predict = XGB_best_params.predict(X_oversampled)
 y_test_predict  = XGB_best_params.predict(X_test)
@@ -332,6 +334,69 @@ print(score.mean())
 
 #%%
 # Plot results
+# Accuracy barplot
+accuracies = [score.mean(), acc_test]
+labels = ['CV Accuracy', 'Test Accuracy']
 
+plt.figure(figsize=(8, 6))
+bar_plot = sns.barplot(x=labels, y=accuracies, hue=accuracies, palette="cividis", edgecolor='black', legend=False)
+
+plt.ylim(0, 1)
+plt.title('XGBoost Accuracy Comparison', fontsize=16)
+plt.ylabel('Accuracy', fontsize=12)
+plt.xlabel('Dataset', fontsize=12)
+
+for p in bar_plot.patches:
+    bar_plot.annotate(f'{p.get_height():.2%}', (p.get_x() + p.get_width() / 2., p.get_height()), 
+                      ha='center', va='bottom', fontsize=12)
+    
+plt.tight_layout()
+if not os.path.exists('./credit_scoring/plots/results_model_accuracy.png'):
+    plt.savefig('./credit_scoring/plots/results_model_accuracy.png')    
+plt.show()
+
+#%%
+#Confusion Matrix
+conf_matrix = confusion_matrix(y_test_target, y_test_predict)
+
+conf_matrix_normalized = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix_normalized, annot=True, fmt=".2%", cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black')
+
+plt.title('Confusion Matrix (Normalized)', fontsize=16)
+plt.ylabel('True Label', fontsize=12)
+plt.xlabel('Predicted Label', fontsize=12)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+
+accuracy_text = f'Accuracy: {acc_test:.2%}'
+plt.gcf().text(0.80, 0.88, accuracy_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+
+plt.tight_layout()
+if not os.path.exists('./credit_scoring/plots/results_cm.png'):
+    plt.savefig('./credit_scoring/plots/results_cm.png')
+plt.show()
+
+#%%
+#ROC - AUC
+y_test_prob = XGB_best_params.predict_proba(X_test)[:, 1]
+
+fpr, tpr, thresholds = roc_curve(y_test_target, y_test_prob)
+roc_auc = auc(fpr, tpr)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='darkkhaki', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate', fontsize=12)
+plt.ylabel('True Positive Rate', fontsize=12)
+plt.title('Receiver Operating Characteristic (ROC) Curve', fontsize=16)
+plt.legend(loc="lower right")
+if not os.path.exists('./credit_scoring/plots/results_roc.png'):
+    plt.savefig('./credit_scoring/plots/results_roc.png')
+plt.show()
 #%%
 # Post-tuning the decision threshold for cost-sensitive learning
