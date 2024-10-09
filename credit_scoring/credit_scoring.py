@@ -21,7 +21,10 @@ from imblearn.over_sampling import SMOTE
 import xgboost as xgb
 from xgboost import XGBClassifier
 
-from sklearn.metrics import accuracy_score, precision_score, confusion_matrix, roc_curve, auc, make_scorer
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
+from sklearn.metrics import roc_curve, auc, PrecisionRecallDisplay, RocCurveDisplay, make_scorer
+
+from sklearn.model_selection._classification_threshold import TunedThresholdClassifierCV
 
 import time
 from collections import Counter
@@ -382,6 +385,7 @@ plt.show()
 #%%
 #ROC - AUC
 y_test_prob = XGB_best_params.predict_proba(X_test)[:, 1]
+y_pred = XGB_best_params.predict(X_test)
 
 fpr, tpr, thresholds = roc_curve(y_test_target, y_test_prob)
 roc_auc = auc(fpr, tpr)
@@ -432,3 +436,158 @@ plt.show()
 
 #%%
 # Post-tuning the decision threshold for cost-sensitive learning
+display = PrecisionRecallDisplay.from_estimator(
+    XGB_best_params, X_test, y_test_target
+)
+
+plt.plot(
+    recall_score(y_test_target, y_pred),  # Recall at the threshold of 0.5
+    precision_score(y_test_target, y_pred),  # Precision at the threshold of 0.5
+    marker="o",
+    markersize=10,
+    color="tab:blue",
+    label="Default cut-off point at 0.5"
+)
+
+plt.title("Precision-Recall curve")
+plt.legend()
+
+plt.show()
+
+#%%
+#Tuning the cut-off point
+def cg_calc(y, y_pred):
+    cm = confusion_matrix(y, y_pred)
+    # The rows of the confusion matrix hold the counts of observed classes
+    # while the columns hold counts of predicted classes. Recall that here we
+    # consider "bad" as the positive class (second row and column).
+    # Scikit-learn model selection tools expect that we follow a convention
+    # that "higher" means "better", hence the following gain matrix assigns
+    # negative gains (costs) to the two kinds of prediction errors:
+    # - a gain of -1 for each false positive ("good" credit labeled as "bad"),
+    # - a gain of -5 for each false negative ("bad" credit labeled as "good"),
+    # The true positives and true negatives are assigned null gains in this
+    # metric.
+    #
+    # Note that theoretically, given that our model is calibrated and our data
+    # set representative and large enough, we do not need to tune the
+    # threshold, but can safely set it to the cost ration 1/5, as stated by Eq.
+    # (2) in Elkan paper [2]_.
+    gain_matrix = np.array(
+        [
+            [0, -1],  # -1 gain for false positives
+            [-5, 0],  # -5 gain for false negatives
+        ]
+    )
+    return np.sum(cm * gain_matrix)
+
+credit_gain_score = make_scorer(cg_calc)
+
+tuned_model = TunedThresholdClassifierCV(
+    estimator=XGB_best_params,
+    scoring=credit_gain_score,
+    store_cv_results=True, 
+)
+
+tuned_model.fit(X_oversampled, y_oversampled_target)
+print(f"{tuned_model.best_threshold_=:0.2f}")
+#%%
+def fpr_score(y, y_pred):
+    cm = confusion_matrix(y, y_pred)
+    tn, fp, _, _ = cm.ravel()
+    tnr = tn / (tn + fp)
+    return 1 - tnr
+
+scoring = {
+    "precision": make_scorer(precision_score),
+    "recall": make_scorer(recall_score),
+    "fpr": make_scorer(fpr_score),
+    "tpr": make_scorer(recall_score),
+}
+
+def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(21, 6))
+
+    linestyles = ("dashed", "dotted")
+    markerstyles = ("o", ">")
+    colors = ("tab:blue", "tab:orange")
+    names = ("XGBoost Classifier", "Tuned Threshold")
+    for idx, (est, linestyle, marker, color, name) in enumerate(
+        zip((XGB_best_params, tuned_model), linestyles, markerstyles, colors, names)
+    ):
+        decision_threshold = getattr(est, "best_threshold_", 0.5)
+        PrecisionRecallDisplay.from_estimator(
+            est,
+            X_test,
+            y_test_target,
+            linestyle=linestyle,
+            color=color,
+            ax=axs[0],
+            name=name,
+        )
+        axs[0].plot(
+            scoring["recall"](est, X_test, y_test_target),
+            scoring["precision"](est, X_test, y_test_target),
+            marker,
+            markersize=10,
+            color=color,
+            label=f"Cut-off point at probability of {decision_threshold:.2f}",
+        )
+        RocCurveDisplay.from_estimator(
+            est,
+            X_test,
+            y_test_target,
+            linestyle=linestyle,
+            color=color,
+            ax=axs[1],
+            name=name,
+            plot_chance_level=idx == 1,
+        )
+        axs[1].plot(
+            scoring["fpr"](est, X_test, y_test_target),
+            scoring["tpr"](est, X_test, y_test_target),
+            marker,
+            markersize=10,
+            color=color,
+            label=f"Cut-off point at probability of {decision_threshold:.2f}",
+        )
+
+    axs[0].set_title("Precision-Recall curve")
+    axs[0].legend()
+    axs[1].set_title("ROC curve")
+    axs[1].legend()
+
+    axs[2].plot(
+        tuned_model.cv_results_["thresholds"],
+        tuned_model.cv_results_["scores"],
+        color="tab:orange",
+    )
+    axs[2].plot(
+        tuned_model.best_threshold_,
+        tuned_model.best_score_,
+        "o",
+        markersize=10,
+        color="tab:orange",
+        label="Optimal cut-off point for the business metric",
+    )
+    axs[2].legend()
+    axs[2].set_xlabel("Decision threshold (probability)")
+    axs[2].set_ylabel("Objective score (using cost-matrix)")
+    axs[2].set_title("Objective score as a function of the decision threshold")
+    fig.suptitle(title)
+
+    plt.tight_layout()
+   # fig.savefig("./credit_scoring/models/prueba.png")
+
+    plt.show()
+
+plot_roc_pr_curves(XGB_best_params, tuned_model, title="Comparison of the cut-off point")
+# %%
+
+# Consideration regarding model refitting and cross-validation
+
+print(f"Business defined metric: {credit_gain_score(XGB_best_params, X_test, y_test_target)}")
+
+
+# Wrapper with manual threshold for deployment.
+
