@@ -189,22 +189,6 @@ for feature in correlation_matrix_l.columns:
         neg_cor_feat.append(feature)
 
 #%%
-# Correlation inspection
-sns.boxplot(x="class", y=pos_cor_feat[0], data=df_oversampled)
-plt.title(f'{pos_cor_feat[0]} vs Class Positive Correlation')
-plt.tight_layout()
-plt.show()
-
-f, axes = plt.subplots(ncols=len(neg_cor_feat), figsize=(30,15))
-
-for i, feature in enumerate(neg_cor_feat):
-    sns.boxplot(x="class", y=f"{feature}", data=df_oversampled, ax=axes[i])
-    axes[i].set_title(f'{feature} vs Class Negative Correlation')
-
-plt.tight_layout()
-plt.show()
-#%%
-#%%
 # Dimensionality Visualization
 #t-SNE
 data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform(X_oversampled)
@@ -222,6 +206,9 @@ ax.legend()
 
 ax.set_title('t-SNE')
 ax.grid(True)
+
+if not os.path.exists('./credit_scoring/plots/t-sne.png'):
+    plt.savefig('./credit_scoring/plots/t-sne.png')   
 
 plt.show()
 #%%
@@ -329,7 +316,6 @@ acc_test = accuracy_score(y_test_target, y_test_predict)
 pre_test = precision_score(y_test_target,y_test_predict)
 
 print(f"{acc_test=}, {pre_test=}")
-
 #%%
 score = cross_val_score(XGB_best_params, X_oversampled, y_oversampled_target,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
@@ -451,7 +437,8 @@ plt.plot(
 
 plt.title("Precision-Recall curve")
 plt.legend()
-
+if not os.path.exists('./credit_scoring/plots/results_thr_05.png'):
+    plt.savefig('./credit_scoring/plots/results_thr_05.png')
 plt.show()
 
 #%%
@@ -577,17 +564,15 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
     fig.suptitle(title)
 
     plt.tight_layout()
-   # fig.savefig("./credit_scoring/models/prueba.png")
+   
+    if not os.path.exists('./credit_scoring/plots/results_thr_tuned.png'):
+        plt.savefig('./credit_scoring/plots/results_thr_tuned.png')
 
     plt.show()
 
 plot_roc_pr_curves(XGB_best_params, tuned_model, title="Comparison of the cut-off point")
-# %%
-
-# Consideration regarding model refitting and cross-validation
 
 print(f"Business defined metric: {credit_gain_score(XGB_best_params, X_test, y_test_target)}")
 
-
+#%%
 # Wrapper with manual threshold for deployment.
-
