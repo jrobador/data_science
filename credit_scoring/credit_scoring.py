@@ -571,8 +571,22 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
     plt.show()
 
 plot_roc_pr_curves(XGB_best_params, tuned_model, title="Comparison of the cut-off point")
-
-print(f"Business defined metric: {credit_gain_score(XGB_best_params, X_test, y_test_target)}")
-
 #%%
 # Wrapper with manual threshold for deployment.
+
+
+class CustomThresholdXGBClassifier(XGBClassifier):
+    def __init__(self, threshold=0.5, **kwargs):
+        super().__init__(**kwargs) 
+        self.threshold = threshold 
+
+    def predict(self, X):
+        y_pred_prob = self.predict_proba(X)[:, 1]
+        return (y_pred_prob > self.threshold).astype(int)
+
+xgb_tuned_thr = CustomThresholdXGBClassifier(threshold=tuned_model.best_threshold_)
+xgb_tuned_thr.fit(X_oversampled, y_oversampled_target)
+
+print(f"Business defined metric: {credit_gain_score(xgb_tuned_thr, X_test, y_test_target)}")
+
+# %%
