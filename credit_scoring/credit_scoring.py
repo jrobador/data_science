@@ -18,15 +18,15 @@ from sklearn.manifold import TSNE
 
 from imblearn.over_sampling import SMOTE
 
+import xgboost as xgb
 from xgboost import XGBClassifier
 
-from sklearn.metrics import accuracy_score, precision_score, confusion_matrix, roc_curve, auc
+from sklearn.metrics import accuracy_score, precision_score, confusion_matrix, roc_curve, auc, make_scorer
 
 import time
 from collections import Counter
 
 from joblib import dump
-
 
 #%%
 # fetch dataset 
@@ -305,7 +305,7 @@ score = cross_val_score(XGB_random_search, X_oversampled, y_oversampled_target,
 
 print (f"Accuracy for CV: {score.mean()}")
 
-#Model didn't improve neither with GS or RS.
+#Model didn't improve with either GS or RS.
 #%%
 # Train with best results
 XGB_best_params = XGBClassifier(random_state=37)
@@ -398,5 +398,37 @@ plt.legend(loc="lower right")
 if not os.path.exists('./credit_scoring/plots/results_roc.png'):
     plt.savefig('./credit_scoring/plots/results_roc.png')
 plt.show()
+
+#%%
+# Matrix cost in function of business problem
+cm = confusion_matrix(y_test_target, y_test_predict)
+
+gain_matrix = np.array(
+    [
+        [0, 1],  # -1 gain for false positives
+        [5, 0],  # -5 gain for false negatives
+    ]
+)
+
+cm_values = np.sum(cm * gain_matrix)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black')
+
+plt.title('Confusion Matrix for Business Scoring', fontsize=14)
+plt.ylabel('True Label', fontsize=12)
+plt.xlabel('Predicted Label', fontsize=12)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+
+cm_values_text = f'Cost: {cm_values}'
+plt.gcf().text(0.88, 0.88, cm_values_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+
+plt.tight_layout()
+if not os.path.exists('./credit_scoring/plots/results_cm_business.png'):
+    plt.savefig('./credit_scoring/plots/results_cm_business.png')
+plt.show()
+
 #%%
 # Post-tuning the decision threshold for cost-sensitive learning
