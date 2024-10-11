@@ -241,3 +241,24 @@ As our friends from [sci-kit learn](https://scikit-learn.org/stable/modules/clas
 ![rma](./plots/results_model_accuracy.png)
 
 ![rroc](./plots/results_roc.png)
+
+
+
+## To-do!!!
+Add an Algorithm comparison plot
+
+# boxplot algorithm comparison
+for name, model in models:
+        kfold = KFold(n_splits=10, random_state=seed)
+        cv_results = cross_val_score(model, X_train, y_train, cv=kfold, scoring=scoring)
+        results.append(cv_results)
+        names.append(name)
+        msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+        print(msg)
+        
+fig = plt.figure(figsize=(11,6))
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results)
+ax.set_xticklabels(names)
+plt.show()
