@@ -4,58 +4,77 @@
 
 Prediction task is to determine whether a person's income is over $50,000 a year.
 
-## Dataset information
-- 48842 subjects, 14 multivariate categories: Categorical as string-encoded and Integer. Target is defined as '<=50K' and '>50K'.
-Categories are:
-age: continuous.
-workclass: Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked.
-fnlwgt: continuous.
-education: Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, 9th, 7th-8th, 12th, Masters, 1st-4th, 10th, Doctorate, 5th-6th, Preschool.
-education-num: continuous.
-marital-status: Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse.
-occupation: Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, Handlers-cleaners, Machine-op-inspct, Adm-clerical, Farming-fishing, Transport-moving, Priv-house-serv, Protective-serv, Armed-Forces.
-relationship: Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried.
-race: White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black.
-sex: Female, Male.
-capital-gain: continuous.
-capital-loss: continuous.
-hours-per-week: continuous.
-native-country: United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad&Tobago, Peru, Hong, Holand-Netherlands.
+## Dataset Information
 
-- Has missing values! Let's start with this pre-processing step.
+The dataset contains **48,842 subjects** with **14 multivariate categories**. These categories include both **categorical** (string-encoded) and **continuous** (integer) variables. The target variable is classified as `<=50K` or `>50K` (income groups).
 
-## Missing values analysis
+### Categories:
 
-The procedure is as follows:
+- **Age**: Continuous (numerical).
+- **Workclass**: Categorical (e.g., Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked).
+- **Final Weight (fnlwgt)**: Continuous (numerical).
+- **Education**: Categorical (e.g., Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, etc.).
+- **Education-Num**: Continuous (numerical representation of education levels).
+- **Marital Status**: Categorical (e.g., Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse).
+- **Occupation**: Categorical (e.g., Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, etc.).
+- **Relationship**: Categorical (e.g., Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried).
+- **Race**: Categorical (e.g., White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black).
+- **Sex**: Categorical (Female, Male).
+- **Capital Gain**: Continuous (numerical).
+- **Capital Loss**: Continuous (numerical).
+- **Hours per Week**: Continuous (numerical).
+- **Native Country**: Categorical (e.g., United-States, Cambodia, England, Puerto-Rico, Canada, Germany, India, Japan, Greece, South, China, Cuba, etc.).
 
-1. **Detecting columns with missing values:** Using EDA (Exploratory Data Analysis) functions to detect what is the quantity of missing values.
-2. **Calculate percentage of missing values:** It is useful because we can decide if we would remove rows, columns or impute the number with some technique.
-3.  **Analize pattern of missing values:** Are they randomly missing or there is any kind of pattern that we can leverage it? For this point, we are going to use the following strategies:
-    -  **Heatmap of missing values:** 
-    ![HM MV](./plots/heatmap_missing_values.png)
-    
-    In the visualization, we can see that there are some columns with missing values, which are highlighted in a different color (yellow) in contrast to the others. In particular, the columns that appear to have missing values ​​include:
+### Notes:
+- The dataset contains **missing values**.
+- Pre-processing steps such as handling missing data are recommended before analysis.
 
-        - *workclass*
-        - *occupation*
-        - *native-country*
 
-        The rest of the columns do not appear to have missing values. This suggests that the missing data problem is concentrated in a limited number of features, which will allow us to apply specific strategies only on those columns.
-    - **Correlation between missing values:** 
-    ![Correlation MV](./plots/correlation_missing_values.png)
-    From the figure, we can detect some key observations:
-        - **Strong correlation between workclass and occupation:** There is a very high correlation between missing values ​​in the workclass and occupation columns (0.9984), indicating that when a value is missing in one, it is also likely to be missing in the other. This suggests that the missing values ​​in both columns might be related, perhaps because the absence of information on workclass also implies that information on occupation is missing.
-        - **Slight correlation between workclass, occupation, and native-country:** The workclass and occupation columns also have a slight correlation with the missing values ​​in the native-country column (0.0268), indicating that, although weak, the missing values ​​in native-country could be related to the missing information in the other two columns. 
-        - **Without correlation between other columns.**
-    - **Missing Pattern Analysis**:
+## Missing Values Analysis
 
-### Is there any logic relation among these features?
+The following procedure was used to analyze and handle missing values in the dataset:
 
-We want to find if there is any hidden relation between *workclass* and *ocupation* features to infere the values to column in function of the other one. On the other hand, *native-country* shows a small correlation, so we can handle it as a independent feature.
+1. **Detecting Missing Values**: 
+   - We utilized Exploratory Data Analysis (EDA) techniques to identify which columns contain missing values and to quantify the extent of the missing data.
+   
+2. **Calculating the Percentage of Missing Values**: 
+   - Understanding the proportion of missing data is essential to decide whether to remove rows, drop entire columns, or apply imputation techniques. Columns or rows with significant missing data might be removed, while others with minimal missing data could be filled using appropriate methods.
 
+3. **Analyzing Missing Data Patterns**:
+   - The goal was to determine if the missing data was random or followed a specific pattern that could inform our preprocessing steps. We employed the following strategies:
+
+   - **Heatmap of Missing Values**:
+     
+     ![Heatmap of Missing Values](./plots/heatmap_missing_values.png)
+     
+     The heatmap visualization highlights columns with missing values in yellow. The columns that appear to have missing data are:
+     - `workclass`
+     - `occupation`
+     - `native-country`
+
+     The remaining columns show no missing values. This indicates that missing data is localized to a few features, allowing us to focus on specific strategies for these columns.
+
+   - **Correlation of Missing Values**:
+     
+     ![Correlation of Missing Values](./plots/correlation_missing_values.png)
+     
+     Key insights from the correlation matrix:
+     - **High correlation between `workclass` and `occupation`**: A strong correlation (0.9984) exists between missing values in these two columns, suggesting that if one is missing, the other is likely missing as well. This may indicate a dependency between the two features.
+     - **Weak correlation with `native-country`**: There is a slight correlation between missing values in `workclass` and `occupation` with `native-country` (0.0268), implying a minor relationship between the missing data in these columns.
+     - **No correlation among other columns**: No significant correlations were observed between other features.
+
+   - **Missing Pattern Analysis (MPA)**: Given the strong correlation between missing values in `workclass` and `occupation`, we performed an MPA to further explore their relationship.
+     1. **Missing `workclass` with present `occupation`**:
+        - No instances were found where `workclass` was missing but `occupation` was present. This suggests a direct dependency between the two columns—when `workclass` is missing, `occupation` is likely missing as well.
+     2. **Missing `occupation` with present `workclass`**:
+        - Instances were found where `occupation` was missing while `workclass` was recorded as `"Never-worked"`. This indicates that individuals categorized as `"Never-worked"` typically have no occupation listed.
+
+The missing values are concentrated in the `workclass`, `occupation`, and `native-country` columns. The high correlation between `workclass` and `occupation` suggests that missing data in these fields can be handled together. For individuals marked as `"Never-worked"`, it is reasonable to assume that they have no occupation, and this could be reflected in the data by filling `occupation` as `"No occupation"` or leaving it as `NaN`.
+
+
+### Is there any logical relationship among these features?
 For this reason, we are going to explore different techniques:
 - **Relation between both columns (cross-analysis):** We are going to see how the *workclass* and *occupation* columns are related in the rows where there are no missing values. (During this analysis, I realized that the dataframe contains '?' values, so I needed to change them to NaN).
-- **Relation visualization (countplot):** See if there are some plots that allows us to visualize clear patterns. 
 
 ![CountPlot](./plots/countplot_missing_values.png)
 
@@ -91,6 +110,8 @@ This second table shows shows the conditional probability of **occupation given 
 - **Conditional probabilities:** In the *Private* class, occupations such as *Craft-repair*, *Handlers-cleaners*, and *Machine-op-inspct* have a high probability (over 90%) of belonging to that class. Similarly, some occupations are exclusive to certain job classes, such as *Armed-Forces* in *Federal-gov*, or with *Priv-house-serv*, working as a *Private*
 
 ### Imputation based on the relationship between columns
+To handle missing values in columns that are interrelated we implemented a conditional imputation strategy based on the relationships observed between these features. The imputation procedure follows these steps:
+
 
 #### Steps
 
@@ -98,22 +119,36 @@ This second table shows shows the conditional probability of **occupation given 
 
 2. **Calculate conditional probabilities:** using our computed conditional probabilities, we infere the most probably values.
 
-3. **Impute the most probable value:** with the most likely associated with the other column. For example, if occupation is *Craft-repair* and *workclass* is missing, and you know that *Craft-repair* is highly associated with *Private*, you impute *Private* on workclass.  
+3. **Impute the most probable value:** For each row with missing data, we imputed the most probable value from the related column. For example, if occupation is missing but workclass is "Private", we use conditional probabilities to determine the most likely occupation and impute it. Special care was taken for individuals labeled as "Never-worked", as these individuals should not have an associated occupation. In such cases, the missing occupation is left empty (i.e., not imputed).
 
-* Tener en cuenta que si una persona nunca trabajó, no puede tener una ocupacion.
+#### Algorithm Description
 
- la clase "Never-worked" debería ser tratada de manera especial, ya que una persona que nunca ha trabajado no debería tener una ocupación asociada. Este es el unico caso donde vamos a dejar ocupacion vacia. Y eso es muy importante para tener en cuenta a la hora de entrenar el modelo
+1. Imputing Missing Occupation:
 
-!Contar un poco el algoritmo que utilicé acá
+- For each row where occupation is missing, the algorithm first checks if workclass is also missing.
+- If both workclass and occupation are missing, the most frequent workclass (calculated as the mode) is imputed.
+- If the workclass is "Never-worked", no imputation is done for occupation, as it makes logical sense for someone who has never worked to not have an occupation.
+- For all other cases, the algorithm looks up the conditional probabilities for occupation given the workclass and chooses a value that meets a probability threshold (e.g., greater than 5%). The most probable occupation is then randomly selected from the valid choices.
 
-## Multivariate features: How to handle them?
+2. Imputing Missing Workclass:
 
-Now that we handled our missing values and have a kind of "curated" dataset, we figured out that we have a multivariate dataset. Also, we don't have too much information about our target: Is it balanced? Those doubts we are going to dig in on this section.
+- If workclass is missing but occupation is known, the algorithm looks up the conditional probabilities for workclass given the occupation.
+- It selects the most likely workclass based on a probability threshold (e.g., greater than 5%), ensuring only the most probable options are imputed.
 
-As we saw in our "First sense of the dataset", the features are categorical and in string-encoded format. We need to encode these categories when we develop our predictive model. (Cual utilizas? Por que?)
+3. Imputing Missing Native-country:
+
+- For the native-country column, we use random imputation. This method ensures variability in the data by randomly selecting a value from the existing unique categories for the missing rows.
+
+4. Final Check:
+
+- After completing the imputation, we check for any remaining missing values, ensuring that only the appropriate rows (e.g., "Never-worked" individuals) have missing occupation.
 
 ## Continous data distribution
- Estas gráficas te permiten ver si los datos están sesgados, tienen valores atípicos, o si siguen una distribución normal. Nos sirve para realizar la normalización antes de proceder con el análisis de clasificación.
+These visualizations allow us to assess the distribution of continuous variables within the dataset. Specifically, they help us identify:
+
+- Skewness: Understanding whether the data is symmetrically distributed or skewed to the left or right, which can influence the choice of normalization technique.
+- Outliers: Detecting any extreme values that may affect the overall analysis and model performance.
+- Normal Distribution: Evaluating whether the data follows a normal distribution, which is often a key assumption in many statistical models.
 
 ### Age
 ![Age dist](./plots/dist_age.png)
@@ -142,7 +177,10 @@ Hours per week doesn't look skewed.
 ### Analysis
 Knowing that the data is very skewed, with some outliers that could influence in our final prediction, we need a further inspection to know if they had a correlation with our target. Also, we are going to keep this skewing in mind to perform a good transformation to the data. We could either perform a logarithmic transformation or a robust scalation.
 
-## Continous data distribution
+### Normalization of integer values
+To handle the scaling of integer-based features, we apply *RobustScaler*. This scaler is particularly effective for data with outliers, as it normalizes the features by removing the median and scaling according to the interquartile range (IQR). The goal is to make the features more comparable by reducing the influence of extreme values, as we saw in the previous section of continuous data distribution.
+
+## Categorical data distribution
 ![cp ed](./plots/cplot_education.png)
 ![cp ms](./plots/cplot_marital-status.png)
 ![cp nc](./plots/cplot_native-country.png)
@@ -155,35 +193,41 @@ Knowing that the data is very skewed, with some outliers that could influence in
 ### Analysis
 Obviously, the continuous also is not normalized and very skewed. For example 'native-country' is almost all United-States (of course, the census was made in the US...)
 
-## Normalization of integer values
-RobustScaler
-
-## Categorical variables encoding
-One hot encoding
-(sparse_output=False, drop='first', handle_unknown='ignore')
+### Categorical variables encoding
+For categorical features, we employ One-Hot Encoding with the following configurations:
+- sparse_output=False: This ensures the output is a dense array, which simplifies further processing.
+- drop='first': This avoids multicollinearity by dropping the first category in each encoded feature, reducing redundancy in the model.
+- handle_unknown='ignore': This ensures that unseen categories during inference are handled gracefully, preventing errors by ignoring unknown categories.
 
 ## Target distribution
-Primero = Parchamos las categorias que estan mal: 4 categorias: "<=50K", "<=50K.", ">50K", ">50K."
+![Target Distribution](./plots/income_unbalanced_distr.png)
 
-![Unbalanced Distribution](./plots/income_unbalanced_distr.png)
+The dataset shows a clear imbalance in the target variable, where approximately 24% of the samples belong to the *>50K* class, while the remaining 76% belong to the *<=50K* class. This imbalance can negatively impact the performance of machine learning models, as they may become biased towards the majority class (*<=50K*).
 
-Hablar que esta mal
+To address this issue, we will implement a combination of under-sampling and over-sampling techniques:
+- Under-sampling: We will reduce the number of samples from the majority class (<=50K) to the half of the original class, to ensure a more balanced distribution of classes.
+- Over-sampling: We will generate synthetic samples for the minority class (>50K) using techniques such as SMOTE (Synthetic Minority Over-sampling Technique) to increase its representation.
 
-## Unbalanced dataset handling (Under and Over sampling)
-data_pipeline = Pipeline(steps=[
-    ('under', RandomUnderSampler(sampling_strategy=0.5)),  
-    ('over', SMOTE()),            
-])
+The new distribution is as follows:
 
 ![Balanced Distribution](./plots/income_balanced_distr.png)
 
+
 ## Correlation Matrix
 
-Note: We have to make sure we use the subsample in our correlation matrix or else our correlation matrix will be affected by the high imbalance between our classes. This occurs due to the high class imbalance in the original dataframe.
+Note: To avoid skewing the correlation matrix due to the high class imbalance in the original DataFrame, we must use a subsample of the data. This ensures that our analysis reflects more balanced class distributions.
+
+First, we generate our correlation matrix, which includes all features resulting from one-hot encoding. This process increases the total number of columns, leading to a matrix with approximately 90 columns that include both continuous and binary features. As a result, the initial visualization can become cluttered and difficult to interpret.
+
 ![CM Bad](./plots/bad_cm.png)
 
-### Feature Engineerined
+### Feature selection
+To improve the readability and effectiveness of our model, we perform *feature selection* using a **Random Forest Classifier**. This technique helps us identify the most important features contributing to the classification task, allowing us to focus on relevant variables and potentially enhance model performance. With this model we identify the top 20 most important features by selecting those with the highest importance scores:
+
 ![TF](./plots/top_features.png)
+
+
+Now, we perform a new correlation matrix with the most important features:
 
 ![CM Good](./plots/good_cm.png)
 
@@ -208,9 +252,7 @@ Note: We have to make sure we use the subsample in our correlation matrix or els
 
 
 ## Dimensionality Analysis with t-SNE 
-Note!
-
-t-SNE is not a direct indicator of linear or non-linear separability of the data, as its main objective is dimensional reduction for visualization, preserving local proximity relationships, not global ones.
+Note: t-SNE is not a direct indicator of linear or non-linear separability of the data, as its main objective is dimensional reduction for visualization, preserving local proximity relationships, not global ones.
 
 ![t-SNE](./plots/t-SNE.png)
 
@@ -229,36 +271,67 @@ As our friends from [sci-kit learn](https://scikit-learn.org/stable/modules/clas
 >
 > For binary classification in scikit-learn, class labels predictions are obtained by hard-coded cut-off rules: a positive class is predicted when the conditional probability is greater than 0.5 (obtained with predict_proba) or if the decision score is greater than 0 (obtained with decision_function).
 
+We perform the classification task with these models:
+- **Random Forest Classifier**: The Random Forest Classifier is an ensemble learning method that constructs multiple decision trees during training and merges their outputs to improve accuracy and control overfitting. It operates by creating a "forest" of trees based on random subsets of data and features, making it robust against noise and capable of handling a large number of features. It also provides feature importance scores, helping in understanding the influence of various features on the predictions.
+- **C-Support Vector Classification**: C-Support Vector Classification (C-SVC) is a type of Support Vector Machine (SVM) that aims to find the optimal hyperplane that separates different classes in the feature space. The 'C' parameter controls the trade-off between achieving a low training error and a low testing error (regularization). SVC is particularly effective in high-dimensional spaces and is widely used for classification tasks with non-linear decision boundaries by utilizing kernel functions.
+- **Logistic Regression**: Logistic Regression is a statistical model used for binary classification that predicts the probability of a class based on one or more predictor variables. It models the relationship between the dependent variable (class) and the independent variables (features) using a logistic function. Despite its name, it is a classification algorithm, not a regression algorithm, and is commonly used due to its simplicity, interpretability, and efficiency for linearly separable data.
+- **XGBoost**: XGBoost (Extreme Gradient Boosting) is an optimized gradient boosting algorithm that is known for its high performance and efficiency. It builds an ensemble of decision trees sequentially, where each new tree corrects errors made by the previous trees. XGBoost incorporates regularization to prevent overfitting and can handle both regression and classification tasks. It is particularly favored in machine learning competitions for its speed and accuracy.
 
-1. Explicar los clasificadores un poco, hablar mas de XGBoost.
+## Comparison of classifier performance
+The accuracy scores obtained through cross-validation are as follows:
+
+![Classifier Comparison](./plots/classifier_comparison.png)
+
+Our classification results indicate an overall improvement over the baseline model performance found on the dataset website. Here’s a comparison of our findings with the baseline accuracies:
+
+- **XGBoost**:
+   - Our model achieved an accuracy of 87.27%, surpassing the baseline of 87.22%.
+- **Random Forest**:
+   - Our implementation resulted in an accuracy of 86.39%, outperforming the baseline of 85.21%.
+- **Logistic Regression**:
+   - We obtained an accuracy of 82.43%, which is higher than the baseline accuracy of 79.78%.
+- **SVC (non-linear)**:
+   - Our model achieved an accuracy of 62.60%, which is lower than the baseline of 79.86%.
+
+Overall, both XGBoost and Random Forest demonstrated superior performance compared to their respective baseline models, while Logistic Regression also showed improvement. However, the SVC (non-linear) model did not perform as well as its baseline counterpart, but the reason of it could be the kernel used ('rbf').
+
+*These results confirm that our approach and the feature selection process have effectively enhanced the model's predictive capabilities, particularly for the XGBoost and Random Forest classifiers. This suggests that our methodology is robust and can yield significant improvements over baseline performance in similar classification tasks.*
 
 ## XGBoost hyperparameters tuning
+Following our initial model evaluations, we conducted hyperparameter optimization using both *GridSearchCV* and *RandomizedSearchCV* to further enhance the performance of our best model, XGBoost.
+
+Through *RandomizedSearchCV*, we identified the optimal hyperparameters for the **XGBoost** model as follows:
+
+- subsample: 1.0
+- reg_lambda: 0.1
+- reg_alpha: 0.001
+- n_estimators: 150
+- max_depth: 9
+- learning_rate: 0.1067
+- gamma: 0.25
+- colsample_bytree: 0.8
+
+With these tuned hyperparameters, we achieved a cross-validation score of 87.46%. This represents an improvement of approximately 0.2% over our previous model accuracy of 87.27% (almost nothing).
 
 ## Results
 
-![rcm](./plots/results_cm.png)
+We present the performance of our final tuned model evaluated against the test set, which was split prior to any handling of the imbalanced target.
+
+### Accuracy barplot
+To compare the model's accuracy, we assessed it using both cross-validation and the test set. The tuned model achieved an accuracy of 87.46% during cross-validation and 84.35% on the test set, demonstrating robust performance.
 
 ![rma](./plots/results_model_accuracy.png)
 
+### Confusion matrix
+
+The confusion matrix for the test set provides valuable insights into the model's performance metrics, including precision, recall, and F1-score. These metrics help us understand how well the model distinguishes between the two classes.
+
+![rcm](./plots/results_cm.png)
+
+### ROC Curve
+
+The ROC curve illustrates the trade-off between the true positive rate and false positive rate at various threshold settings. This visualization allows us to evaluate the model's ability to distinguish between classes effectively.
+
 ![rroc](./plots/results_roc.png)
 
-
-
-## To-do!!!
-Add an Algorithm comparison plot
-
-# boxplot algorithm comparison
-for name, model in models:
-        kfold = KFold(n_splits=10, random_state=seed)
-        cv_results = cross_val_score(model, X_train, y_train, cv=kfold, scoring=scoring)
-        results.append(cv_results)
-        names.append(name)
-        msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
-        print(msg)
-        
-fig = plt.figure(figsize=(11,6))
-fig.suptitle('Algorithm Comparison')
-ax = fig.add_subplot(111)
-plt.boxplot(results)
-ax.set_xticklabels(names)
-plt.show()
+**Overall, the results indicate that our tuned XGBoost model performs well in both cross-validation and on the test set, confirming its efficacy in classifying the target variable accurately. The additional metrics derived from the confusion matrix further substantiate its performance, ensuring reliability in real-world applications.**
