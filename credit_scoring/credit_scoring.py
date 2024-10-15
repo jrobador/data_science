@@ -25,6 +25,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, confu
 from sklearn.metrics import roc_curve, auc, PrecisionRecallDisplay, RocCurveDisplay, make_scorer
 
 from sklearn.model_selection._classification_threshold import TunedThresholdClassifierCV
+from imblearn.metrics import classification_report_imbalanced
 
 import time
 from collections import Counter
@@ -104,9 +105,11 @@ for feature in (categorical_features):
 
 #%%
 # Handling multivariate features
-X = X.drop(columns=['Attribute8', 'Attribute11', 'Attribute18', 'Attribute9', 'Attribute10', 'Attribute14', 'Attribute20'])
 
-continuous_features = [feature for feature in continuous_features if feature not in ['Attribute8', 'Attribute11', 'Attribute18']]
+#X = X.drop(columns=['Attribute8', 'Attribute11', 'Attribute18'])
+#continuous_features = [feature for feature in continuous_features if feature not in ['Attribute8', 'Attribute11', 'Attribute18']]
+
+X = X.drop(columns=['Attribute9', 'Attribute10', 'Attribute14', 'Attribute20'])
 categorical_features = [feature for feature in categorical_features if feature not in ['Attribute9', 'Attribute10', 'Attribute14', 'Attribute20']]
 
 X.loc[:, continuous_features] = RobustScaler().fit_transform(X[continuous_features])
@@ -268,34 +271,25 @@ if not os.path.exists('./credit_scoring/plots/xgbperf1.png'):
     plt.savefig('./credit_scoring/plots/xgbperf1.png')
 plt.show()
 #%%
-# Train with best results
-XGB_best_params = XGBClassifier(random_state=37)
-XGB_best_params.fit(X_oversampled, y_oversampled)
+# Train the classifier
+XGB_model.fit(X_oversampled, y_oversampled)
 
 if not os.path.exists('./credit_scoring/models/XGB_model.joblib'):
-    dump(XGB_best_params, './credit_scoring/models/XGB_model.joblib')
+    dump(XGB_model, './credit_scoring/models/XGB_model.joblib')
 #%%
-y_train_predict = XGB_best_params.predict(X_oversampled)
-y_test_predict  = XGB_best_params.predict(X_test)
-
-acc_train = accuracy_score(y_oversampled, y_train_predict)
-pre_train = precision_score(y_oversampled, y_train_predict)
-
-print(f"{acc_train=}, {pre_train=}")
+y_test_predict  = XGB_model.predict(X_test)
 
 acc_test = accuracy_score(y_test, y_test_predict) 
-pre_test = precision_score(y_test,y_test_predict)
+pre_test = precision_score(y_test,y_test_predict, average='weighted')
+recall = recall_score(y_test, y_test_predict, average='weighted')
 
-print(f"{acc_test=}, {pre_test=}")
-#%%
-score = cross_val_score(XGB_best_params, X_oversampled, y_oversampled,
-                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
-print(score.mean())
+report = classification_report_imbalanced(y_test, y_test_predict, target_names=['Good Credit', 'Bad Credit'])
+print (report)
 
 #%%
-# Plot results
+# Results for test-set
 # Accuracy barplot
-accuracies = [score.mean(), acc_test]
+accuracies = [accuracy_scores.mean(), acc_test]
 labels = ['CV Accuracy', 'Test Accuracy']
 
 plt.figure(figsize=(8, 6))
@@ -341,8 +335,8 @@ plt.show()
 
 #%%
 #ROC - AUC
-y_test_prob = XGB_best_params.predict_proba(X_test)[:, 1]
-y_pred = XGB_best_params.predict(X_test)
+y_test_prob = XGB_model.predict_proba(X_test)[:, 1]
+y_pred = XGB_model.predict(X_test)
 
 fpr, tpr, thresholds = roc_curve(y_test, y_test_prob)
 roc_auc = auc(fpr, tpr)
@@ -394,7 +388,7 @@ plt.show()
 #%%
 # Post-tuning the decision threshold for cost-sensitive learning
 display = PrecisionRecallDisplay.from_estimator(
-    XGB_best_params, X_test, y_test
+    XGB_model, X_test, y_test
 )
 
 plt.plot(
@@ -442,7 +436,7 @@ def cg_calc(y, y_pred):
 credit_gain_score = make_scorer(cg_calc)
 
 tuned_model = TunedThresholdClassifierCV(
-    estimator=XGB_best_params,
+    estimator=XGB_model,
     scoring=credit_gain_score,
     store_cv_results=True, 
 )
@@ -463,7 +457,7 @@ scoring = {
     "tpr": make_scorer(recall_score),
 }
 
-def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
+def plot_roc_pr_curves(XGB_model, tuned_model, *, title):
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(21, 6))
 
     linestyles = ("dashed", "dotted")
@@ -471,7 +465,7 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
     colors = ("tab:blue", "tab:orange")
     names = ("XGBoost Classifier", "Tuned Threshold")
     for idx, (est, linestyle, marker, color, name) in enumerate(
-        zip((XGB_best_params, tuned_model), linestyles, markerstyles, colors, names)
+        zip((XGB_model, tuned_model), linestyles, markerstyles, colors, names)
     ):
         decision_threshold = getattr(est, "best_threshold_", 0.5)
         PrecisionRecallDisplay.from_estimator(
@@ -541,7 +535,7 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
 
     plt.show()
 
-plot_roc_pr_curves(XGB_best_params, tuned_model, title="Comparison of the cut-off point")
+plot_roc_pr_curves(XGB_model, tuned_model, title="Comparison of the cut-off point")
 #%%
 # Wrapper with manual threshold for deployment.
 class CustomThresholdXGBClassifier(XGBClassifier):
