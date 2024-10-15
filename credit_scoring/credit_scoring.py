@@ -267,41 +267,6 @@ for i, (metric, values) in enumerate(scores.items()):
 if not os.path.exists('./credit_scoring/plots/xgbperf1.png'):
     plt.savefig('./credit_scoring/plots/xgbperf1.png')
 plt.show()
-
-#%%
-# RandomSearchCV
-param_dist = {
-    'n_estimators': np.arange(50, 300, 50),  
-    'max_depth': np.arange(3, 8),
-    'learning_rate': np.linspace(0.01, 0.3, 10), 
-    'subsample': np.linspace(0.6, 0.9, 4).tolist() + [1.0], 
-    'colsample_bytree': np.linspace(0.6, 0.9, 4).tolist() + [1.0],
-    'gamma': np.linspace(0, 0.5, 5),    
-    'min_child_weight': np.arange(1, 6),
-    'reg_alpha': np.logspace(-3, 0, 5), 
-    'reg_lambda': np.logspace(-1, 1, 5) 
-}
-
-random_search = RandomizedSearchCV(estimator=XGB_model, param_distributions=param_dist, 
-                                   n_iter=50, scoring='accuracy', cv=3, verbose=1, random_state=37)
-
-start = time.time()
-random_search.fit(X_oversampled, y_oversampled,  eval_set=[(X_test, y_test)], verbose=False)
-print("CPU RandomizedSearchCV Time: %s seconds" % (str(time.time() - start)))
-
-print(f"{random_search.best_params_=}")
-print(f"{random_search.best_score_}")
-
-#%%
-# CV for Random Search best model
-XGB_random_search = XGBClassifier(**random_search.best_params_, random_state=37)
-
-score = cross_val_score(XGB_random_search, X_oversampled, y_oversampled,
-                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
-
-print (f"Accuracy for CV: {score.mean()}")
-
-#Model didn't improve with either GS or RS.
 #%%
 # Train with best results
 XGB_best_params = XGBClassifier(random_state=37)
