@@ -45,9 +45,6 @@ print(statlog_german_credit_data.metadata)
   
 # variable information 
 print(statlog_german_credit_data.variables) 
-
-#%%
-Counter(y['class'])
 #%%
 # 1. Dataset information
 df.head()
@@ -69,7 +66,7 @@ print(continuous_features)
 print("\nCategorical features:")
 print(categorical_features)
 # %%
-# Inspecting continous data distribution
+# Inspecting continuous data distribution
 std = {}
 for feature in (continuous_features):
     plt.figure(figsize=(8, 5)) 
@@ -107,9 +104,14 @@ for feature in (categorical_features):
 
 #%%
 # Handling multivariate features
+X = X.drop(columns=['Attribute8', 'Attribute11', 'Attribute18', 'Attribute9', 'Attribute10', 'Attribute14', 'Attribute20'])
+
+continuous_features = [feature for feature in continuous_features if feature not in ['Attribute8', 'Attribute11', 'Attribute18']]
+categorical_features = [feature for feature in categorical_features if feature not in ['Attribute9', 'Attribute10', 'Attribute14', 'Attribute20']]
+
 X.loc[:, continuous_features] = RobustScaler().fit_transform(X[continuous_features])
 
-encoder = OneHotEncoder(sparse_output=False, drop='first')  # drop='first' para evitar la multicolinealidad (one feature is a linear combination of others)
+encoder = OneHotEncoder(sparse_output=False) #, drop='first')  # drop='first' para evitar la multicolinealidad (one feature is a linear combination of others)
 encoded_categorical = encoder.fit_transform(X[categorical_features])
 
 encoded_X = pd.DataFrame(encoded_categorical, columns=encoder.get_feature_names_out(categorical_features))
@@ -135,11 +137,28 @@ plt.tight_layout()
 if not os.path.exists('./credit_scoring/plots/y_dist_imbal'):
     plt.savefig('./credit_scoring/plots/y_dist_imbal')
 plt.show()
-
-# Since we have an imbalanced dataset with few samples -> Oversampling
 #%%
 # Splitting data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=37, stratify=y)
+#1 was good, 2 was bad.
+y_mapped = y['class'].map({1: 0, 2: 1})
+
+X_train, X_test, y_train, y_test = train_test_split(X, y_mapped, test_size=0.1, random_state=37, stratify=y)
+#%%
+# Data dsitribution after splitting
+tg_f = sns.countplot(data=pd.concat([X_train, y_train], axis=1), x='class', hue='class', palette='cividis', legend=False)
+tg_f.set_xticklabels(['Good', 'Bad'])
+total = sum([p.get_height() for p in tg_f.patches])
+for p in tg_f.patches:
+    height = p.get_height()
+    percentage = 100 * height / total
+    tg_f.annotate(f'{percentage:.0f}%', (p.get_x() + p.get_width() / 2., p.get_height()), 
+                      ha='center', va='bottom', fontsize=12)
+
+plt.tight_layout()
+
+if not os.path.exists('./credit_scoring/plots/y_odist_imbal'):
+    plt.savefig('./credit_scoring/plots/y_odist_imbal')    
+plt.show()
 #%%
 # Oversampling
 X_oversampled, y_oversampled = SMOTE(random_state=37).fit_resample(X_train, y_train)
@@ -158,8 +177,8 @@ for p in tg_dist_2.patches:
     
 plt.tight_layout()
 
-if not os.path.exists('./credit_scoring/plots/y_dist_bal'):
-    plt.savefig('./credit_scoring/plots/y_dist_bal')
+if not os.path.exists('./credit_scoring/plots/y_odist_bal'):
+    plt.savefig('./credit_scoring/plots/y_odist_bal')
 plt.show()
 
 #%%
@@ -191,16 +210,16 @@ for feature in correlation_matrix_l.columns:
 #%%
 # Dimensionality Visualization
 #t-SNE
-data_embedded_TSNE = TSNE(n_components=3, random_state=37).fit_transform(X_oversampled)
+data_embedded_TSNE = TSNE(n_components=2, random_state=37).fit_transform(X_oversampled)
 
 #%%
 fig = plt.figure(facecolor="white", constrained_layout=True)
-ax = fig.add_subplot(projection='3d')
+ax = fig.add_subplot()
 
 y_oversampled_flat = y_oversampled.values.ravel()
 
-ax.scatter(data_embedded_TSNE[(y_oversampled_flat == 1),0], data_embedded_TSNE[(y_oversampled_flat == 1),1], c='yellow',  label="Non Fraud")
-ax.scatter(data_embedded_TSNE[(y_oversampled_flat == 2),0], data_embedded_TSNE[(y_oversampled_flat == 2),1], c='blue',    label="Fraud")
+ax.scatter(data_embedded_TSNE[(y_oversampled_flat == 0),0], data_embedded_TSNE[(y_oversampled_flat == 0),1], c='yellow',  label="Non Fraud")
+ax.scatter(data_embedded_TSNE[(y_oversampled_flat == 1),0], data_embedded_TSNE[(y_oversampled_flat == 1),1], c='blue',    label="Fraud")
 
 ax.legend()
 
@@ -215,52 +234,39 @@ plt.show()
 # Classifier task
 XGB_model = XGBClassifier(random_state=37)
 
-#1 was good, 2 was bad.
-y_oversampled_target = y_oversampled['class'].map({1: 0, 2: 1})
-y_test_target = y_test['class'].map({1: 0, 2: 1})
+cv_strategy = StratifiedKFold(n_splits=5, random_state=37, shuffle=True)
 
-score = cross_val_score(XGB_model, X_oversampled, y_oversampled_target,
-                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
+accuracy_scores = cross_val_score(XGB_model, X_oversampled, y_oversampled,
+                                   cv=cv_strategy, scoring='accuracy')
 
-print (f"Accuracy for CV: {score.mean()}")
-#%% 
-# GridSearchCV
-param_grid = {
-    'n_estimators': [100, 150, 200],      
-    'max_depth': [4, 5, 6],               
-    'learning_rate': [0.1, 0.2],    
-    'subsample': [0.75, 0.8, 0.85],       
-    'colsample_bytree': [0.7, 0.75, 0.8], 
-    'gamma': [0.15, 0.2, 0.25],           
-    'min_child_weight': [2, 3, 4],        
-    
+precision_scorer = make_scorer(precision_score)
+precision_scores = cross_val_score(XGB_model, X_oversampled, y_oversampled,
+                                    cv=cv_strategy, scoring=precision_scorer)
+
+recall_scorer = make_scorer(recall_score)
+recall_scores = cross_val_score(XGB_model, X_oversampled, y_oversampled,
+                                 cv=cv_strategy, scoring=recall_scorer)
+
+scores = {
+    'Accuracy': accuracy_scores,
+    'Precision': precision_scores,
+    'Recall': recall_scores
 }
 
-XGB_model = XGBClassifier(random_state=37)
+plt.figure(figsize=(10, 6))
+bp = plt.boxplot(scores.values(), labels=scores.keys())
+plt.title('Model Performance Comparison')
+plt.ylabel('Score')
+plt.grid(axis='y')
+plt.ylim(0, 1)
 
-grid_search = GridSearchCV(estimator=XGB_model, param_grid=param_grid, 
-                           scoring='accuracy', cv=3, verbose=1)
+for i, (metric, values) in enumerate(scores.items()):
+    mean_score = np.mean(values)
+    plt.text(i + 1, mean_score + 0.05, f'{mean_score:.2%}', ha='center', va='bottom')
 
-start = time.time()
-grid_search.fit(X_oversampled, y_oversampled_target, eval_set=[(X_test, y_test_target)], verbose=False)
-print("CPU GridSearchCV Time: %s seconds" % (str(time.time() - start)))
-
-# Print the best parameters and best score
-print(f"Best Parameters: {grid_search.best_params_}")
-print(f"Best Score: {grid_search.best_score_}")
-
-#%%
-#CV for Grid Search best model
-gs_best_params = {'colsample_bytree': 0.8, 'gamma': 0.25, 'learning_rate': 0.2, 
-                  'max_depth': 6, 'min_child_weight': 2, 'n_estimators': 100, 
-                  'subsample': 0.8}
-
-XGB_grid_search = XGBClassifier(**gs_best_params, random_state=37)
-
-score = cross_val_score(XGB_grid_search, X_oversampled, y_oversampled_target,
-                             cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
-
-print (f"Accuracy for CV: {score.mean()}")
+if not os.path.exists('./credit_scoring/plots/xgbperf1.png'):
+    plt.savefig('./credit_scoring/plots/xgbperf1.png')
+plt.show()
 
 #%%
 # RandomSearchCV
@@ -280,7 +286,7 @@ random_search = RandomizedSearchCV(estimator=XGB_model, param_distributions=para
                                    n_iter=50, scoring='accuracy', cv=3, verbose=1, random_state=37)
 
 start = time.time()
-random_search.fit(X_oversampled, y_oversampled_target,  eval_set=[(X_test, y_test_target)], verbose=False)
+random_search.fit(X_oversampled, y_oversampled,  eval_set=[(X_test, y_test)], verbose=False)
 print("CPU RandomizedSearchCV Time: %s seconds" % (str(time.time() - start)))
 
 print(f"{random_search.best_params_=}")
@@ -290,7 +296,7 @@ print(f"{random_search.best_score_}")
 # CV for Random Search best model
 XGB_random_search = XGBClassifier(**random_search.best_params_, random_state=37)
 
-score = cross_val_score(XGB_random_search, X_oversampled, y_oversampled_target,
+score = cross_val_score(XGB_random_search, X_oversampled, y_oversampled,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
 
 print (f"Accuracy for CV: {score.mean()}")
@@ -299,7 +305,7 @@ print (f"Accuracy for CV: {score.mean()}")
 #%%
 # Train with best results
 XGB_best_params = XGBClassifier(random_state=37)
-XGB_best_params.fit(X_oversampled, y_oversampled_target)
+XGB_best_params.fit(X_oversampled, y_oversampled)
 
 if not os.path.exists('./credit_scoring/models/XGB_model.joblib'):
     dump(XGB_best_params, './credit_scoring/models/XGB_model.joblib')
@@ -307,17 +313,17 @@ if not os.path.exists('./credit_scoring/models/XGB_model.joblib'):
 y_train_predict = XGB_best_params.predict(X_oversampled)
 y_test_predict  = XGB_best_params.predict(X_test)
 
-acc_train = accuracy_score(y_oversampled_target, y_train_predict)
-pre_train = precision_score(y_oversampled_target, y_train_predict)
+acc_train = accuracy_score(y_oversampled, y_train_predict)
+pre_train = precision_score(y_oversampled, y_train_predict)
 
 print(f"{acc_train=}, {pre_train=}")
 
-acc_test = accuracy_score(y_test_target, y_test_predict) 
-pre_test = precision_score(y_test_target,y_test_predict)
+acc_test = accuracy_score(y_test, y_test_predict) 
+pre_test = precision_score(y_test,y_test_predict)
 
 print(f"{acc_test=}, {pre_test=}")
 #%%
-score = cross_val_score(XGB_best_params, X_oversampled, y_oversampled_target,
+score = cross_val_score(XGB_best_params, X_oversampled, y_oversampled,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
 print(score.mean())
 
@@ -346,7 +352,7 @@ plt.show()
 
 #%%
 #Confusion Matrix
-conf_matrix = confusion_matrix(y_test_target, y_test_predict)
+conf_matrix = confusion_matrix(y_test, y_test_predict)
 
 conf_matrix_normalized = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
 
@@ -373,7 +379,7 @@ plt.show()
 y_test_prob = XGB_best_params.predict_proba(X_test)[:, 1]
 y_pred = XGB_best_params.predict(X_test)
 
-fpr, tpr, thresholds = roc_curve(y_test_target, y_test_prob)
+fpr, tpr, thresholds = roc_curve(y_test, y_test_prob)
 roc_auc = auc(fpr, tpr)
 
 plt.figure(figsize=(8, 6))
@@ -391,7 +397,7 @@ plt.show()
 
 #%%
 # Matrix cost in function of business problem
-cm = confusion_matrix(y_test_target, y_test_predict)
+cm = confusion_matrix(y_test, y_test_predict)
 
 gain_matrix = np.array(
     [
@@ -423,12 +429,12 @@ plt.show()
 #%%
 # Post-tuning the decision threshold for cost-sensitive learning
 display = PrecisionRecallDisplay.from_estimator(
-    XGB_best_params, X_test, y_test_target
+    XGB_best_params, X_test, y_test
 )
 
 plt.plot(
-    recall_score(y_test_target, y_pred),  # Recall at the threshold of 0.5
-    precision_score(y_test_target, y_pred),  # Precision at the threshold of 0.5
+    recall_score(y_test, y_pred),  # Recall at the threshold of 0.5
+    precision_score(y_test, y_pred),  # Precision at the threshold of 0.5
     marker="o",
     markersize=10,
     color="tab:blue",
@@ -476,7 +482,7 @@ tuned_model = TunedThresholdClassifierCV(
     store_cv_results=True, 
 )
 
-tuned_model.fit(X_oversampled, y_oversampled_target)
+tuned_model.fit(X_oversampled, y_oversampled)
 print(f"{tuned_model.best_threshold_=:0.2f}")
 #%%
 def fpr_score(y, y_pred):
@@ -506,15 +512,15 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
         PrecisionRecallDisplay.from_estimator(
             est,
             X_test,
-            y_test_target,
+            y_test,
             linestyle=linestyle,
             color=color,
             ax=axs[0],
             name=name,
         )
         axs[0].plot(
-            scoring["recall"](est, X_test, y_test_target),
-            scoring["precision"](est, X_test, y_test_target),
+            scoring["recall"](est, X_test, y_test),
+            scoring["precision"](est, X_test, y_test),
             marker,
             markersize=10,
             color=color,
@@ -523,7 +529,7 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
         RocCurveDisplay.from_estimator(
             est,
             X_test,
-            y_test_target,
+            y_test,
             linestyle=linestyle,
             color=color,
             ax=axs[1],
@@ -531,8 +537,8 @@ def plot_roc_pr_curves(XGB_best_params, tuned_model, *, title):
             plot_chance_level=idx == 1,
         )
         axs[1].plot(
-            scoring["fpr"](est, X_test, y_test_target),
-            scoring["tpr"](est, X_test, y_test_target),
+            scoring["fpr"](est, X_test, y_test),
+            scoring["tpr"](est, X_test, y_test),
             marker,
             markersize=10,
             color=color,
@@ -583,6 +589,6 @@ class CustomThresholdXGBClassifier(XGBClassifier):
         return (y_pred_prob > self.threshold).astype(int)
 
 xgb_tuned_thr = CustomThresholdXGBClassifier(threshold=tuned_model.best_threshold_, n_estimators=100)
-xgb_tuned_thr.fit(X_oversampled, y_oversampled_target)
+xgb_tuned_thr.fit(X_oversampled, y_oversampled)
 
-print(f"Business defined metric: {credit_gain_score(xgb_tuned_thr, X_test, y_test_target)}")
+print(f"Business defined metric: {credit_gain_score(xgb_tuned_thr, X_test, y_test)}")
