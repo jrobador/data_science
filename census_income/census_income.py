@@ -87,7 +87,7 @@ if not os.path.exists('./census_income/plots/correlation_missing_values.png'):
     plt.savefig('./census_income/plots/correlation_missing_values.png')
 plt.show()
 
-#   c. Missing Pattern Analysis - #Ver para que me sirve!
+#   c. Missing Pattern Analysis
 missing_workclass_only = df[df['workclass'].isnull() & df['occupation'].notnull()]
 missing_occupation_only = df[df['occupation'].isnull() & df['workclass'].notnull()]
 
@@ -186,7 +186,6 @@ print(df[df['workclass'] != 'Never-worked'].isna().any())
 
 #%%
 # 6. Inspecting continous data distribution
-
 X = df.drop('income', axis=1)
 
 #¡Duplicated column!
@@ -229,11 +228,29 @@ for feature in (categorical_features):
     if not os.path.exists(file_path):
         plt.savefig(file_path)
     plt.show()
+
+#%%
+# 8. Analyzing target distribution
+# ¡First curate the bad target names! 
+df['income'] = df['income'].str.replace('.','', regex=False)
+y = df['income'] 
+
+#Need to do this for test also, if we have production. Need this mapping.
+y = y.map({'<=50K': 0, '>50K': 1})
+
+plt.figure(figsize=(12, 8))
+sns.countplot(data=df, x='income')
+if not os.path.exists('./census_income/plots/income_unbalanced_distr.png'):
+    plt.savefig('./census_income/plots/income_unbalanced_distr.png')
+plt.show()
+
+#%%
+print (len(df[df['income'] == '>50K'])/(len(df['income'])))
 # %%
-# 8. Normalizating numerical features
+# 9. Normalizating numerical features
 X[numerical_features] = RobustScaler().fit_transform(X[numerical_features])
 # %%
-# 9. Codifying categorical features
+# 10. Codifying categorical features
 encoder = OneHotEncoder(sparse_output=False, drop='first', handle_unknown='ignore')  # drop='first' para evitar la multicolinealidad
 encoded_categorical = encoder.fit_transform(X[categorical_features])
 
@@ -242,19 +259,7 @@ encoded_X = pd.DataFrame(encoded_categorical, columns=encoder.get_feature_names_
 X = X.drop(columns=categorical_features).reset_index(drop=True)
 encoded_X = encoded_X.reset_index(drop=True)
 X = pd.concat([X, encoded_X], axis=1)
-# %%
 X.head()
-# 10. Analyzing target distribution
-# ¡First curate the bad target names! 
-df['income'] = df['income'].str.replace('.','', regex=False)
-y = df['income'] 
-y = y.map({'<=50K': 0, '>50K': 1})
-
-plt.figure(figsize=(12, 8))
-sns.countplot(data=df, x='income')
-if not os.path.exists('./census_income/plots/income_unbalanced_distr.png'):
-    plt.savefig('./census_income/plots/income_unbalanced_distr.png')
-plt.show()
 
 #%%
 # 11. Splitting original dataframe
@@ -358,15 +363,39 @@ for name, clf in (classifiers):
 
 print(acc_scores)
 #%%
+# 19. Boxplot algorithm comparison
+results = pd.DataFrame(acc_scores, columns=['Classifier', 'Scores'])
+results = results.explode('Scores')
+plt.figure(figsize=(12, 6))
+sns.boxplot(x='Classifier', y='Scores', data=results, boxprops=dict(alpha=0.5), width=0.5)
+sns.swarmplot(x='Classifier', y='Scores', data=results, color='k', alpha=0.5)
+
+mean_scores = results.groupby('Classifier')['Scores'].mean().reset_index()
+
+for index, row in mean_scores.iterrows():
+    plt.text(row['Classifier'], row['Scores'] + 0.01, f"{row['Scores']:.3f}", 
+             horizontalalignment='center', size='medium', color='black', weight='semibold')
+
+plt.title('Comparison of Classifier Performance')
+plt.xlabel('Classifier')
+plt.ylabel('Accuracy Scores')
+plt.grid()
+if not os.path.exists('./census_income/plots/classifier_comparison.png'):
+    plt.savefig('./census_income/plots/classifier_comparison.png')
+plt.show()
+
 # Find best classifier
 best = ['', 0]
 for name, score in acc_scores:
     if score > best[1]:
         best[0] = name
         best[1] = score
-        
+
+print(f"The best classifier is: {best[0]} with an accuracy of {best[1]:.4f}")
+
+
 #%%
-# 19. Grid Search CV
+# 20. Grid Search CV
 resampled_data_test = pd.DataFrame(X_test, columns=X_test.columns) 
 top_features_X_test = resampled_data_test[top_features.index.tolist()]
 xgb_cpu = XGBClassifier(random_state=37)
@@ -396,7 +425,7 @@ print(f"{grid_search.best_params_=}")
 print(f"{grid_search.best_score_}")
 
 #%%
-# 20. RandomizedSearchCV
+# 21. RandomizedSearchCV
 param_dist = {
     'n_estimators': np.arange(50, 300, 50),
     'max_depth': np.arange(3, 10),
@@ -418,7 +447,7 @@ print("CPU RandomizedSearchCV Time: %s seconds" % (str(time.time() - start)))
 print(f"{random_search.best_params_=}")
 print(f"{random_search.best_score_}")
 #%%
-# 21. Cross-validation - best model
+# 22. Cross-validation - best model
 best_params = random_search.best_params_ if random_search.best_score_ > grid_search.best_score_ else grid_search.best_params_
 
 best_clf = XGBClassifier(**best_params)
@@ -426,12 +455,12 @@ best_score = cross_val_score(best_clf, top_features_X_train, y_resampled,
                              cv=StratifiedKFold(n_splits=5, random_state=37, shuffle=True), scoring='accuracy')
 print(best_score)
 # %%
-# 22. Train and save our best model
+# 23. Train and save our best model
 best_clf.fit(top_features_X_train, y_resampled,  eval_set=[(top_features_X_test, y_test)])
 if not os.path.exists('./census_income/models/model_LR_undersampling.joblib'):
     dump(best_clf, './census_income/models/model_LR_undersampling.joblib')
 #%%
-# 23. Testing best model with test set
+# 24. Testing best model with test set
 y_train_pred = best_clf.predict(top_features_X_train)
 train_accuracy = accuracy_score(y_resampled, y_train_pred)
 
@@ -441,8 +470,7 @@ test_accuracy = accuracy_score(y_test, y_test_pred)
 print(f"Train Accuracy: {train_accuracy}")
 print(f"Test Accuracy: {test_accuracy}")
 # %%
-# 23. Business Plots!
-
+# 25. Business Plots!
 # Accuracy barplot
 accuracies = [best_score.mean(), test_accuracy]
 labels = ['CV Accuracy', 'Test Accuracy']
