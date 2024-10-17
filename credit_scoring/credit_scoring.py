@@ -355,38 +355,75 @@ if not os.path.exists('./credit_scoring/plots/results_roc.png'):
 plt.show()
 
 #%%
-# Matrix cost in function of business problem
-cm = confusion_matrix(y_test, y_test_predict)
-
+# Matrix cost for business scoring - CV
 gain_matrix = np.array(
     [
-        [0, 1],  # -1 gain for false positives
-        [5, 0],  # -5 gain for false negatives
+        [0, -1],  # -1 gain for false positives
+        [-5, 0],  # -5 gain for false negatives
     ]
 )
 
-cm_values = np.sum(cm * gain_matrix)
+aggregate_cm = np.zeros((2, 2))
+total_cost = 0
+
+for train_index, eval_index in cv_strategy.split(X_oversampled, y_oversampled):
+    X_train, X_eval = X_oversampled.iloc[train_index], X_oversampled.iloc[eval_index]
+    y_train, y_eval = y_oversampled.iloc[train_index], y_oversampled.iloc[eval_index]
+    
+    XGB_model.fit(X_train, y_train)
+    
+    y_eval_predict = XGB_model.predict(X_eval)
+    
+    cm = confusion_matrix(y_eval, y_eval_predict)
+    
+    aggregate_cm += cm
+    
+    fold_cost = np.sum(cm * gain_matrix)
+    total_cost += fold_cost
 
 plt.figure(figsize=(8, 6))
-sns.heatmap(cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
-            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black')
+sns.heatmap(aggregate_cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black', fmt='.0f')
 
-plt.title('Confusion Matrix for Business Scoring', fontsize=14)
+plt.title('Confusion Matrix for Business Scoring (Cross-Validation)', fontsize=14)
 plt.ylabel('True Label', fontsize=12)
 plt.xlabel('Predicted Label', fontsize=12)
 plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 
-cm_values_text = f'Cost: {cm_values}'
-plt.gcf().text(0.88, 0.88, cm_values_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+total_cost_text = f'Total cost: {total_cost}'
+plt.gcf().text(0.80, 0.88, total_cost_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
 
 plt.tight_layout()
-if not os.path.exists('./credit_scoring/plots/results_cm_business.png'):
-    plt.savefig('./credit_scoring/plots/results_cm_business.png')
+if not os.path.exists('./credit_scoring/plots/r_cm_bs_cv.png'):
+    plt.savefig('./credit_scoring/plots/r_cm_bs_cv.png')
+
 plt.show()
 
 #%%
-# Post-tuning the decision threshold for cost-sensitive learning
+# Matrix cost for business scoring - Test set
+total_cost = np.sum(conf_matrix * gain_matrix)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black')
+
+plt.title('Confusion Matrix for Business Scoring (Test-set)', fontsize=14)
+plt.ylabel('True Label', fontsize=12)
+plt.xlabel('Predicted Label', fontsize=12)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+
+total_cost_text = f'Total cost: {total_cost}'
+plt.gcf().text(0.80, 0.88, total_cost_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+
+plt.tight_layout()
+if not os.path.exists('./credit_scoring/plots/r_cm_bs_ts.png'):
+    plt.savefig('./credit_scoring/plots/r_cm_bs_ts.png')
+plt.show()
+
+#%%
+# Precision-Recall Curve
 display = PrecisionRecallDisplay.from_estimator(
     XGB_model, X_test, y_test
 )
@@ -407,24 +444,9 @@ if not os.path.exists('./credit_scoring/plots/results_thr_05.png'):
 plt.show()
 
 #%%
-#Tuning the cut-off point
+# Tuning the threshold for cost-sensitive learning
 def cg_calc(y, y_pred):
     cm = confusion_matrix(y, y_pred)
-    # The rows of the confusion matrix hold the counts of observed classes
-    # while the columns hold counts of predicted classes. Recall that here we
-    # consider "bad" as the positive class (second row and column).
-    # Scikit-learn model selection tools expect that we follow a convention
-    # that "higher" means "better", hence the following gain matrix assigns
-    # negative gains (costs) to the two kinds of prediction errors:
-    # - a gain of -1 for each false positive ("good" credit labeled as "bad"),
-    # - a gain of -5 for each false negative ("bad" credit labeled as "good"),
-    # The true positives and true negatives are assigned null gains in this
-    # metric.
-    #
-    # Note that theoretically, given that our model is calibrated and our data
-    # set representative and large enough, we do not need to tune the
-    # threshold, but can safely set it to the cost ration 1/5, as stated by Eq.
-    # (2) in Elkan paper [2]_.
     gain_matrix = np.array(
         [
             [0, -1],  # -1 gain for false positives
@@ -442,7 +464,9 @@ tuned_model = TunedThresholdClassifierCV(
 )
 
 tuned_model.fit(X_oversampled, y_oversampled)
-print(f"{tuned_model.best_threshold_=:0.2f}")
+
+print(f"Best Threshold from CV: {tuned_model.best_threshold_:0.2f}")
+print(f"Best Score from CV: {tuned_model.best_score_}")
 #%%
 def fpr_score(y, y_pred):
     cm = confusion_matrix(y, y_pred)
@@ -537,17 +561,66 @@ def plot_roc_pr_curves(XGB_model, tuned_model, *, title):
 
 plot_roc_pr_curves(XGB_model, tuned_model, title="Comparison of the cut-off point")
 #%%
-# Wrapper with manual threshold for deployment.
-class CustomThresholdXGBClassifier(XGBClassifier):
-    def __init__(self, threshold=0.5, **kwargs):
-        self.threshold = threshold 
-        super().__init__(**kwargs) 
+# Cost for tuned threshold
+aggregate_cm = np.zeros((2, 2))
+total_cost = 0
 
-    def predict(self, X):
-        y_pred_prob = self.predict_proba(X)[:, 1]
-        return (y_pred_prob > self.threshold).astype(int)
+for train_index, eval_index in cv_strategy.split(X_oversampled, y_oversampled):
+    X_train, X_eval = X_oversampled.iloc[train_index], X_oversampled.iloc[eval_index]
+    y_train, y_eval = y_oversampled.iloc[train_index], y_oversampled.iloc[eval_index]
+    
+    tuned_model.fit(X_train, y_train)
+    
+    y_eval_prob = tuned_model.predict_proba(X_eval)[:, 1] 
+    y_eval_predict = (y_eval_prob >= tuned_model.best_threshold_).astype(int) 
+    
+    cm = confusion_matrix(y_eval, y_eval_predict)
+    
+    aggregate_cm += cm
+    
+    fold_cost = np.sum(cm * gain_matrix)
+    total_cost += fold_cost
 
-xgb_tuned_thr = CustomThresholdXGBClassifier(threshold=tuned_model.best_threshold_, n_estimators=100)
-xgb_tuned_thr.fit(X_oversampled, y_oversampled)
+plt.figure(figsize=(8, 6))
+sns.heatmap(aggregate_cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black', fmt='.0f')
 
-print(f"Business defined metric: {credit_gain_score(xgb_tuned_thr, X_test, y_test)}")
+plt.title('Confusion Matrix for Business Scoring (Tuned Threshold, CV)', fontsize=14)
+plt.ylabel('True Label', fontsize=12)
+plt.xlabel('Predicted Label', fontsize=12)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+
+total_cost_text = f'Total Cost: {total_cost}'
+plt.gcf().text(0.80, 0.88, total_cost_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+
+plt.tight_layout()
+if not os.path.exists('./credit_scoring/plots/r_cm_bs_tuned_cv.png'):
+    plt.savefig('./credit_scoring/plots/r_cm_bs_tuned_cv.png')
+
+plt.show()
+
+#%%
+# Matrix cost in function of business problem - Test set
+y_test_predict = tuned_model.predict(X_test)
+cm = confusion_matrix(y_test, y_test_predict)
+total_cost = np.sum(cm * gain_matrix)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black')
+
+plt.title('Confusion Matrix for Business Scoring (Tuned Threshold, Test-set)', fontsize=14)
+plt.ylabel('True Label', fontsize=12)
+plt.xlabel('Predicted Label', fontsize=12)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+
+total_cost_text = f'Total cost: {total_cost}'
+plt.gcf().text(0.80, 0.88, total_cost_text, fontsize=11, bbox=dict(facecolor='lightgray', edgecolor='black', boxstyle='round,pad=0.5'))
+
+plt.tight_layout()
+if not os.path.exists('./credit_scoring/plots/r_cm_bs_tuned_ts.png'):
+    plt.savefig('./credit_scoring/plots/r_cm_bs_tuned_ts.png')
+plt.show()
+# %%
