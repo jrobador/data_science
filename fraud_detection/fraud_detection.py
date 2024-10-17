@@ -735,6 +735,3 @@ print(classification_report_imbalanced(y_test, predictions_unov))
 model_filename = f'./models/model_LR_unovsampling_2.joblib'
 dump(best_classifier_unov, model_filename)
 print(f"Model {best_classifier_unov.__class__.__name__} saved as {model_filename}")
-
-# %%
-
