@@ -405,8 +405,8 @@ plt.show()
 total_cost = np.sum(conf_matrix * gain_matrix)
 
 plt.figure(figsize=(8, 6))
-sns.heatmap(cm * gain_matrix, annot=True, cmap="cividis", cbar=False,
-            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black')
+sns.heatmap(conf_matrix * gain_matrix, annot=True, cmap="cividis", cbar=False,
+            xticklabels=["Good", "Bad"], yticklabels=["Good", "Bad"], linewidths=1, linecolor='black', fmt='.0f')
 
 plt.title('Confusion Matrix for Business Scoring (Test-set)', fontsize=14)
 plt.ylabel('True Label', fontsize=12)
