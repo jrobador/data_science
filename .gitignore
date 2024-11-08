@@ -2,3 +2,4 @@
 fraud_detection/data/
 INRIA-multivariate_regression/codes/sfno/__pycache__/plots.cpython-312.pyc
 INRIA-multivariate_regression/codes/sfno/__pycache__/vmf_convolution.cpython-312.pyc
+bank_churn/data/BankChurners.csv
