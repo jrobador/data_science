@@ -76,7 +76,7 @@ print("\nPotentially Categorical (numerical with ≤10 unique values):")
 print(feature_types['categorical_features']['potential_categorical'])
 
 # %%
-# Check continuous data distrbution
+# Checking data distrbution
 # Customer Age
 fig = make_subplots(rows=2, cols=1)
 
@@ -89,13 +89,103 @@ fig.add_trace(tr2,row=2,col=1)
 fig.update_layout(height=700, width=1200, title_text="Distribution of Customer Ages")
 fig.show()
 
-# 
-# %%
-# Check categorical data distribution
+#%%
+# Dependent Count (Family Size)
+fig = make_subplots(rows=2, cols=1)
+
+tr1=go.Box(x=df['Dependent_count'],name='Dependent count Box Plot',boxmean=True)
+tr2=go.Histogram(x=df['Dependent_count'],name='Dependent count Histogram')
+
+fig.add_trace(tr1,row=1,col=1)
+fig.add_trace(tr2,row=2,col=1)
+
+fig.update_layout(height=700, width=1200, title_text="Distribution of Dependent counts (close family size)")
+fig.show()
+
+#%%
+# Education Level proportion
+ex.pie(df,names='Education_Level',title='Propotion Of Education Levels',hole=0.33)
+
+#%%
+# Marriage Status proportion
+ex.pie(df,names='Marital_Status',title='Propotion Of Different Marriage Statuses',hole=0.33)
+
+#%% 
+# Income levels proportion
+ex.pie(df,names='Income_Category',title='Propotion Of Different Income Levels',hole=0.33)
+
+#%%
+# Card Categories proportion
+ex.pie(df,names='Card_Category',title='Propotion Of Different Card Categories',hole=0.33)
+
+#%%
+# How longer the customer is part of the bank proportion
+fig = make_subplots(rows=2, cols=1)
+
+tr1=go.Box(x=df['Months_on_book'],name='Months on book Box Plot',boxmean=True)
+tr2=go.Histogram(x=df['Months_on_book'],name='Months on book Histogram')
+
+fig.add_trace(tr1,row=1,col=1)
+fig.add_trace(tr2,row=2,col=1)
+
+fig.update_layout(height=700, width=1200, title_text="Distribution of months the customer is part of the bank")
+fig.show()
+
+#%%
+# No of total prod/customer 
+
+fig = make_subplots(rows=2, cols=1)
+
+tr1=go.Box(x=df['Total_Relationship_Count'],name='Total no. of products Box Plot',boxmean=True)
+tr2=go.Histogram(x=df['Total_Relationship_Count'],name='Total no. of products Histogram')
+
+fig.add_trace(tr1,row=1,col=1)
+fig.add_trace(tr2,row=2,col=1)
+
+fig.update_layout(height=700, width=1200, title_text="Distribution of Total no. of products held by the customer")
+fig.show()
+
+#%%
+# No of months inactive
+fig = make_subplots(rows=2, cols=1)
+
+tr1=go.Box(x=df['Months_Inactive_12_mon'],name='number of months inactive Box Plot',boxmean=True)
+tr2=go.Histogram(x=df['Months_Inactive_12_mon'],name='number of months inactive Histogram')
+
+fig.add_trace(tr1,row=1,col=1)
+fig.add_trace(tr2,row=2,col=1)
+
+fig.update_layout(height=700, width=1200, title_text="Distribution of the number of months inactive in the last 12 months")
+fig.show()
+
+#%% 
+# Distribution of credit limit
+fig = make_subplots(rows=2, cols=1)
+
+tr1=go.Box(x=df['Credit_Limit'],name='Credit_Limit Box Plot',boxmean=True)
+tr2=go.Histogram(x=df['Credit_Limit'],name='Credit_Limit Histogram')
+
+fig.add_trace(tr1,row=1,col=1)
+fig.add_trace(tr2,row=2,col=1)
+
+fig.update_layout(height=700, width=1200, title_text="Distribution of the Credit Limit")
+fig.show()
+
+# Distribution of total transaction amount
+fig = make_subplots(rows=2, cols=1)
+
+tr1=go.Box(x=df['Total_Trans_Amt'],name='Total_Trans_Amt Box Plot',boxmean=True)
+tr2=go.Histogram(x=df['Total_Trans_Amt'],name='Total_Trans_Amt Histogram')
+
+fig.add_trace(tr1,row=1,col=1)
+fig.add_trace(tr2,row=2,col=1)
+
+fig.update_layout(height=700, width=1200, title_text="Distribution of the Total Transaction Amount (Last 12 months)")
+fig.show()
 
 # %%
 # Check target distribution
-
+ex.pie(y,names='Attrition_Flag',title='Proportion of churn vs not churn customers',hole=0.33)
 # %%
 # Continuous normalization and categorical encoding
 
