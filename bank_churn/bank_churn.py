@@ -193,4 +193,11 @@ ex.pie(y,names='Attrition_Flag',title='Proportion of churn vs not churn customer
 # Train - Test - Eval splitting
 
 # %%
-# 
+# Under and Over sampling
+
+# %%
+# Correlation Matrix
+
+# %%
+# Classifiers
+# AdaBoostClassifier, HistGradientBoostingClassifier, XGBoost
